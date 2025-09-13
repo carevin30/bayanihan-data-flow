@@ -11,6 +11,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -44,7 +52,8 @@ const mockResidents = [
     age: 34,
     gender: "Male",
     civilStatus: "Married",
-    address: "123 Mabini St., Zone 1",
+    address: "Mabini St., Zone 1",
+    houseNumber: "123",
     contact: "09123456789",
     occupation: "Teacher",
     status: ["Voter", "Head of Household"],
@@ -58,7 +67,8 @@ const mockResidents = [
     age: 67,
     gender: "Female",
     civilStatus: "Widow",
-    address: "456 Rizal Ave., Zone 2",
+    address: "Rizal Ave., Zone 2",
+    houseNumber: "456",
     contact: "09987654321",
     occupation: "Retired",
     status: ["Senior Citizen", "PWD", "4Ps Beneficiary"],
@@ -72,11 +82,42 @@ const mockResidents = [
     age: 28,
     gender: "Male",
     civilStatus: "Single",
-    address: "789 Del Pilar St., Zone 3",
+    address: "Del Pilar St., Zone 3",
+    houseNumber: "789",
     contact: "09876543210",
     occupation: "Construction Worker",
     status: ["Voter"],
     dateRegistered: "2024-03-10",
+  },
+  {
+    id: 4,
+    firstName: "Ana",
+    lastName: "Reyes",
+    middleName: "Santos",
+    age: 42,
+    gender: "Female",
+    civilStatus: "Married",
+    address: "Bonifacio St., Zone 1",
+    houseNumber: "234",
+    contact: "09111222333",
+    occupation: "Nurse",
+    status: ["Voter", "Healthcare Worker"],
+    dateRegistered: "2024-01-28",
+  },
+  {
+    id: 5,
+    firstName: "Pedro",
+    lastName: "Dela Cruz",
+    middleName: "Jose",
+    age: 73,
+    gender: "Male",
+    civilStatus: "Married",
+    address: "Lapu-Lapu St., Zone 4",
+    houseNumber: "567",
+    contact: "09444555666",
+    occupation: "Retired",
+    status: ["Senior Citizen", "Voter"],
+    dateRegistered: "2024-02-05",
   },
 ];
 
@@ -243,73 +284,85 @@ export default function ResidentsModule() {
         </CardContent>
       </Card>
 
-      {/* Residents Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-        {filteredResidents.map((resident) => (
-          <Card key={resident.id} className="hover:shadow-md transition-shadow">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div>
-                  <CardTitle className="text-lg">
-                    {resident.firstName} {resident.lastName}
-                  </CardTitle>
-                  <CardDescription className="flex items-center mt-1">
-                    <Users className="h-3 w-3 mr-1" />
-                    {resident.age} years old • {resident.gender} • {resident.civilStatus}
-                  </CardDescription>
-                </div>
-                <Badge variant="outline" className="text-xs">
-                  ID: {resident.id.toString().padStart(4, '0')}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center text-sm">
-                  <MapPin className="h-3 w-3 mr-2 text-muted-foreground" />
-                  <span className="text-muted-foreground">{resident.address}</span>
-                </div>
-                <div className="flex items-center text-sm">
-                  <Phone className="h-3 w-3 mr-2 text-muted-foreground" />
-                  <span className="text-muted-foreground">{resident.contact}</span>
-                </div>
-                <div className="flex items-center text-sm">
-                  <Calendar className="h-3 w-3 mr-2 text-muted-foreground" />
-                  <span className="text-muted-foreground">Registered: {resident.dateRegistered}</span>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Status:</p>
-                <div className="flex flex-wrap gap-1">
-                  {resident.status.map((status, index) => (
-                    <Badge key={index} className={`text-xs ${getStatusColor(status)}`}>
-                      {status}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-
-              <div className="pt-2 border-t border-border">
-                <div className="flex justify-between">
-                  <div className="flex space-x-1">
-                    <Button variant="ghost" size="sm">
-                      <Eye className="h-3 w-3" />
-                    </Button>
-                    <Button variant="ghost" size="sm">
-                      <Edit className="h-3 w-3" />
-                    </Button>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    <FileText className="h-3 w-3 mr-1" />
-                    Certificate
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {/* Residents Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">All Residents</CardTitle>
+          <CardDescription>Complete list of registered residents</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>ID</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>House No.</TableHead>
+                <TableHead>Address</TableHead>
+                <TableHead>Age</TableHead>
+                <TableHead>Contact</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredResidents.map((resident) => (
+                <TableRow key={resident.id}>
+                  <TableCell className="font-medium">
+                    {resident.id.toString().padStart(4, '0')}
+                  </TableCell>
+                  <TableCell>
+                    <div>
+                      <div className="font-medium">
+                        {resident.firstName} {resident.lastName}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {resident.gender} • {resident.civilStatus}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="font-mono text-sm">
+                    {resident.houseNumber}
+                  </TableCell>
+                  <TableCell className="max-w-xs">
+                    {resident.houseNumber} {resident.address}
+                  </TableCell>
+                  <TableCell>{resident.age}</TableCell>
+                  <TableCell className="font-mono text-sm">
+                    {resident.contact}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      {resident.status.slice(0, 2).map((status, index) => (
+                        <Badge key={index} variant="outline" className={`text-xs ${getStatusColor(status)}`}>
+                          {status}
+                        </Badge>
+                      ))}
+                      {resident.status.length > 2 && (
+                        <Badge variant="outline" className="text-xs">
+                          +{resident.status.length - 2}
+                        </Badge>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="sm">
+                        <Eye className="h-3 w-3" />
+                      </Button>
+                      <Button variant="ghost" size="sm">
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                      <Button variant="outline" size="sm">
+                        <FileText className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
       {/* Stats Footer */}
       <Card>
