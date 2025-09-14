@@ -10,6 +10,7 @@ import Officials from "./pages/Officials";
 import Ordinances from "./pages/Ordinances";
 import Activities from "./pages/Activities";
 import Reports from "./pages/Reports";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/ordinances" element={<Ordinances />} />
           <Route path="/activities" element={<Activities />} />
           <Route path="/reports" element={<Reports />} />
+          <Route path="/settings" element={<Settings />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,18 +20,19 @@ interface LayoutProps {
 }
 
 const navigation = [
-  { name: "Dashboard", href: "/", icon: Home, current: true },
-  { name: "Residents", href: "/residents", icon: Users, current: false },
-  { name: "Households", href: "/households", icon: Building, current: false },
-  { name: "Officials", href: "/officials", icon: UserCheck, current: false },
-  { name: "Ordinances", href: "/ordinances", icon: FileText, current: false },
-  { name: "Activities", href: "/activities", icon: Calendar, current: false },
-  { name: "Reports", href: "/reports", icon: BarChart3, current: false },
-  { name: "Settings", href: "/settings", icon: Settings, current: false },
+  { name: "Dashboard", href: "/", icon: Home },
+  { name: "Residents", href: "/residents", icon: Users },
+  { name: "Households", href: "/households", icon: Building },
+  { name: "Officials", href: "/officials", icon: UserCheck },
+  { name: "Ordinances", href: "/ordinances", icon: FileText },
+  { name: "Activities", href: "/activities", icon: Calendar },
+  { name: "Reports", href: "/reports", icon: BarChart3 },
+  { name: "Settings", href: "/settings", icon: Settings },
 ];
 
 export default function Layout({ children }: LayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const location = useLocation();
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -71,13 +73,14 @@ export default function Layout({ children }: LayoutProps) {
           <nav className="flex-1 px-4 py-4 space-y-1">
             {navigation.map((item) => {
               const Icon = item.icon;
+              const isActive = location.pathname === item.href;
               return (
                 <a
                   key={item.name}
                   href={item.href}
                   className={cn(
                     "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
-                    item.current
+                    isActive
                       ? "bg-primary/10 text-primary border border-primary/20"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted"
                   )}
