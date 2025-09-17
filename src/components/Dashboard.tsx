@@ -8,8 +8,7 @@ import {
   FileText,
   Plus,
   Bell,
-  Activity,
-  TrendingUp,
+  BarChart3,
 } from "lucide-react";
 
 // Mock data
@@ -17,26 +16,30 @@ const stats = [
   {
     title: "Total Residents",
     value: "2,847",
+    change: "+2.5%",
     icon: Users,
-    trend: { value: 2.5, isPositive: true },
+    trend: "up" as const,
   },
   {
     title: "Total Households",
     value: "892",
+    change: "+1.2%", 
     icon: Building,
-    trend: { value: 1.2, isPositive: true },
+    trend: "up" as const,
   },
   {
     title: "Ongoing Activities",
     value: "12",
+    change: "-5.2%",
     icon: Calendar,
-    trend: { value: -5.2, isPositive: false },
+    trend: "down" as const,
   },
   {
     title: "Reports Submitted",
     value: "34",
+    change: "+8.3%",
     icon: FileText,
-    trend: { value: 8.3, isPositive: true },
+    trend: "up" as const,
   },
 ];
 
@@ -69,151 +72,149 @@ const notifications = [
     id: 1,
     message: "New birth registration for Maria Santos",
     time: "2 hours ago",
-    type: "info",
   },
   {
     id: 2,
     message: "Barangay clearance request pending approval",
     time: "4 hours ago",
-    type: "warning",
   },
   {
     id: 3,
     message: "Monthly report submitted successfully",
     time: "1 day ago",
-    type: "success",
   },
 ];
 
 export default function Dashboard() {
   return (
-    <div className="px-6 space-y-6">
+    <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground">
-            Welcome back! Here's what's happening in your barangay.
-          </p>
-        </div>
-        <div className="flex items-center space-x-3">
-          <Button variant="outline" size="sm">
-            <Bell className="h-4 w-4 mr-2" />
-            Notifications
-          </Button>
-          <Button size="sm" className="bg-primary hover:bg-primary/90">
-            <Plus className="h-4 w-4 mr-2" />
-            Quick Add
-          </Button>
+      <div className="relative">
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-transparent to-primary-glow/10 rounded-3xl blur-3xl -z-10" />
+        <div className="relative bg-gradient-to-r from-card/80 to-card/60 backdrop-blur-sm rounded-2xl p-8 border border-border/50 shadow-xl">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
+                Dashboard
+              </h1>
+              <p className="text-muted-foreground mt-2 text-lg">
+                Welcome to your barangay management system
+              </p>
+            </div>
+            <div className="flex items-center space-x-3">
+              <Button variant="outline" className="flex items-center space-x-2 h-11 px-6 rounded-xl border-border/50 hover:border-primary/50 hover:bg-primary/5 transition-all duration-200">
+                <Bell className="h-4 w-4" />
+                <span>Notifications</span>
+              </Button>
+              <Button className="flex items-center space-x-2 h-11 px-6 rounded-xl bg-gradient-to-r from-primary to-primary-glow hover:opacity-90 transition-opacity shadow-lg shadow-primary/25">
+                <Plus className="h-4 w-4" />
+                <span>Quick Add</span>
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, index) => (
-          <StatCard key={index} {...stat} />
+          <div key={index} className="transform hover:scale-105 transition-transform duration-200">
+            <StatCard {...stat} />
+          </div>
         ))}
       </div>
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Population Chart Placeholder */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <TrendingUp className="h-5 w-5 mr-2 text-primary" />
-              Population Distribution
-            </CardTitle>
-            <CardDescription>
-              Breakdown by age groups and zones
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64 bg-muted/50 rounded-lg flex items-center justify-center">
-              <div className="text-center">
-                <Activity className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">Chart visualization coming soon</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Notifications */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Bell className="h-5 w-5 mr-2 text-primary" />
-              Recent Notifications
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {notifications.map((notification) => (
-              <div key={notification.id} className="flex items-start space-x-3 p-3 bg-muted/30 rounded-lg">
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-foreground">
-                    {notification.message}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {notification.time}
-                  </p>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Population Distribution Chart */}
+        <div className="lg:col-span-2">
+          <Card className="border-0 shadow-xl bg-gradient-to-br from-card/95 to-card/80 backdrop-blur-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-xl font-semibold">Population Distribution</CardTitle>
+              <CardDescription className="text-base">
+                Demographic breakdown by age groups
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-64 flex items-center justify-center text-muted-foreground bg-gradient-to-br from-muted/30 to-transparent rounded-xl border border-border/30 backdrop-blur-sm">
+                <div className="text-center space-y-2">
+                  <BarChart3 className="w-12 h-12 mx-auto text-primary/60" />
+                  <p className="text-lg font-medium">Chart Coming Soon</p>
+                  <p className="text-sm">Population analytics will be displayed here</p>
                 </div>
               </div>
-            ))}
-            <Button variant="outline" className="w-full" size="sm">
-              View All Notifications
-            </Button>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Recent Notifications */}
+        <div className="space-y-6">
+          <Card className="border-0 shadow-xl bg-gradient-to-br from-card/95 to-card/80 backdrop-blur-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-xl font-semibold flex items-center space-x-2">
+                <Bell className="w-5 h-5 text-primary" />
+                <span>Recent Notifications</span>
+              </CardTitle>
+              <CardDescription className="text-base">Latest updates and alerts</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {notifications.map((notification, index) => (
+                <div key={index} className="group p-4 rounded-xl bg-gradient-to-r from-accent/30 to-transparent border border-border/30 hover:border-primary/30 transition-all duration-200 hover:shadow-md">
+                  <div className="flex items-start space-x-3">
+                    <div className="w-3 h-3 bg-gradient-to-r from-primary to-primary-glow rounded-full mt-1.5 flex-shrink-0 shadow-sm" />
+                    <div className="flex-1">
+                      <p className="text-sm text-foreground font-medium">{notification.message}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{notification.time}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <Button variant="outline" className="w-full mt-4 h-11 rounded-xl border-border/50 hover:border-primary/50 hover:bg-primary/5 transition-all duration-200">
+                View All Notifications
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Recent Activities */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center">
-                <Calendar className="h-5 w-5 mr-2 text-primary" />
-                Recent Activities
-              </CardTitle>
-              <CardDescription>
-                Latest barangay programs and events
-              </CardDescription>
-            </div>
-            <Button variant="outline" size="sm">
-              View All
-            </Button>
-          </div>
+      <Card className="border-0 shadow-xl bg-gradient-to-br from-card/95 to-card/80 backdrop-blur-sm">
+        <CardHeader className="pb-6">
+          <CardTitle className="text-xl font-semibold flex items-center space-x-2">
+            <Calendar className="w-5 h-5 text-primary" />
+            <span>Recent Activities</span>
+          </CardTitle>
+          <CardDescription className="text-base">Latest barangay activities and events</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {recentActivities.map((activity) => (
-              <div
-                key={activity.id}
-                className="flex items-center justify-between p-4 bg-muted/30 rounded-lg"
-              >
-                <div className="flex-1">
-                  <h4 className="font-medium text-foreground">{activity.title}</h4>
-                  <div className="flex items-center space-x-4 mt-1">
-                    <span
-                      className={`text-xs px-2 py-1 rounded-full ${
-                        activity.status === "Ongoing"
-                          ? "bg-primary/10 text-primary"
-                          : activity.status === "Upcoming"
-                          ? "bg-warning/10 text-warning"
-                          : "bg-success/10 text-success"
-                      }`}
-                    >
-                      {activity.status}
-                    </span>
-                    <span className="text-sm text-muted-foreground">{activity.date}</span>
-                    <span className="text-sm text-muted-foreground">
-                      {activity.participants} participants
-                    </span>
+            {recentActivities.map((activity, index) => (
+              <div key={index} className="group p-5 rounded-xl bg-gradient-to-r from-accent/20 to-transparent border border-border/30 hover:border-primary/30 transition-all duration-300 hover:shadow-lg hover:scale-[1.02]">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-primary/20 to-primary-glow/20 rounded-xl flex items-center justify-center shadow-sm">
+                      <Calendar className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-foreground text-lg">{activity.title}</h4>
+                      <div className="flex items-center space-x-4 mt-2">
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold shadow-sm ${
+                          activity.status === 'Completed' ? 'bg-gradient-to-r from-success/20 to-success/10 text-success border border-success/20' :
+                          activity.status === 'Ongoing' ? 'bg-gradient-to-r from-primary/20 to-primary/10 text-primary border border-primary/20' :
+                          'bg-gradient-to-r from-warning/20 to-warning/10 text-warning border border-warning/20'
+                        }`}>
+                          {activity.status}
+                        </span>
+                        <span className="text-sm text-muted-foreground font-medium">{activity.date}</span>
+                        <span className="text-sm text-muted-foreground">
+                          {activity.participants} participants
+                        </span>
+                      </div>
+                    </div>
                   </div>
+                  <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-primary/10 hover:text-primary rounded-xl">
+                    View Details
+                  </Button>
                 </div>
-                <Button variant="ghost" size="sm">
-                  View Details
-                </Button>
               </div>
             ))}
           </div>

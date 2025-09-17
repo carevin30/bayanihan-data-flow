@@ -1,45 +1,39 @@
-import { cn } from "@/lib/utils";
-import { LucideIcon } from "lucide-react";
+import React from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { LucideIcon } from 'lucide-react';
 
 interface StatCardProps {
   title: string;
-  value: string | number;
+  value: string;
+  change: string;
   icon: LucideIcon;
-  trend?: {
-    value: number;
-    isPositive: boolean;
-  };
-  className?: string;
+  trend: 'up' | 'down';
 }
 
-export default function StatCard({ title, value, icon: Icon, trend, className }: StatCardProps) {
+const StatCard = ({ title, value, change, icon: Icon, trend }: StatCardProps) => {
   return (
-    <div className={cn("bg-card rounded-lg border border-border p-6 shadow-sm", className)}>
-      <div className="flex items-center justify-between">
-        <div className="flex-1">
-          <p className="text-sm font-medium text-muted-foreground">{title}</p>
-          <p className="text-2xl font-bold text-foreground mt-1">{value}</p>
-          {trend && (
-            <p className="text-xs mt-2 flex items-center">
-              <span
-                className={cn(
-                  "font-medium",
-                  trend.isPositive ? "text-success" : "text-destructive"
-                )}
-              >
-                {trend.isPositive ? "+" : ""}
-                {trend.value}%
-              </span>
-              <span className="text-muted-foreground ml-1">from last month</span>
+    <Card className="border-0 shadow-xl bg-gradient-to-br from-card/95 to-card/80 backdrop-blur-sm hover:shadow-2xl transition-all duration-300 group">
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-muted-foreground">{title}</p>
+            <p className="text-3xl font-bold text-foreground group-hover:text-primary transition-colors duration-200">{value}</p>
+            <p className={`text-sm font-semibold flex items-center space-x-1 ${
+              trend === 'up' ? 'text-success' : 'text-destructive'
+            }`}>
+              <span className={`w-2 h-2 rounded-full ${
+                trend === 'up' ? 'bg-success' : 'bg-destructive'
+              }`} />
+              <span>{change}</span>
             </p>
-          )}
-        </div>
-        <div className="ml-4">
-          <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-            <Icon className="h-6 w-6 text-primary" />
+          </div>
+          <div className="w-14 h-14 bg-gradient-to-br from-primary/20 to-primary-glow/20 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-200">
+            <Icon className="h-7 w-7 text-primary" />
           </div>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
-}
+};
+
+export default StatCard;
