@@ -44,6 +44,63 @@ export type Database = {
         }
         Relationships: []
       }
+      residents: {
+        Row: {
+          address: string
+          age: number
+          civil_status: string
+          contact: string | null
+          created_at: string
+          date_registered: string
+          first_name: string
+          gender: string
+          house_number: string | null
+          id: string
+          last_name: string
+          middle_name: string | null
+          occupation: string | null
+          status: string[] | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address: string
+          age: number
+          civil_status: string
+          contact?: string | null
+          created_at?: string
+          date_registered?: string
+          first_name: string
+          gender: string
+          house_number?: string | null
+          id?: string
+          last_name: string
+          middle_name?: string | null
+          occupation?: string | null
+          status?: string[] | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string
+          age?: number
+          civil_status?: string
+          contact?: string | null
+          created_at?: string
+          date_registered?: string
+          first_name?: string
+          gender?: string
+          house_number?: string | null
+          id?: string
+          last_name?: string
+          middle_name?: string | null
+          occupation?: string | null
+          status?: string[] | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

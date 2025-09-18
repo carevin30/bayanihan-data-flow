@@ -1,4 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +13,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import {
   Table,
   TableBody,
@@ -26,8 +37,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Plus,
   Search,
@@ -36,108 +49,126 @@ import {
   Eye,
   Edit,
   FileText,
-  Users,
-  MapPin,
-  Phone,
-  Calendar,
+  Loader2,
 } from "lucide-react";
 
-// Mock resident data
-const mockResidents = [
-  {
-    id: 1,
-    firstName: "Juan",
-    lastName: "Cruz",
-    middleName: "Santos",
-    age: 34,
-    gender: "Male",
-    civilStatus: "Married",
-    address: "Mabini St., Zone 1",
-    houseNumber: "123",
-    contact: "09123456789",
-    occupation: "Teacher",
-    status: ["Voter", "Head of Household"],
-    dateRegistered: "2024-01-15",
-  },
-  {
-    id: 2,
-    firstName: "Maria",
-    lastName: "Garcia",
-    middleName: "Lopez",
-    age: 67,
-    gender: "Female",
-    civilStatus: "Widow",
-    address: "Rizal Ave., Zone 2",
-    houseNumber: "456",
-    contact: "09987654321",
-    occupation: "Retired",
-    status: ["Senior Citizen", "PWD", "4Ps Beneficiary"],
-    dateRegistered: "2024-02-20",
-  },
-  {
-    id: 3,
-    firstName: "Roberto",
-    lastName: "Mendoza",
-    middleName: "Rivera",
-    age: 28,
-    gender: "Male",
-    civilStatus: "Single",
-    address: "Del Pilar St., Zone 3",
-    houseNumber: "789",
-    contact: "09876543210",
-    occupation: "Construction Worker",
-    status: ["Voter"],
-    dateRegistered: "2024-03-10",
-  },
-  {
-    id: 4,
-    firstName: "Ana",
-    lastName: "Reyes",
-    middleName: "Santos",
-    age: 42,
-    gender: "Female",
-    civilStatus: "Married",
-    address: "Bonifacio St., Zone 1",
-    houseNumber: "234",
-    contact: "09111222333",
-    occupation: "Nurse",
-    status: ["Voter", "Healthcare Worker"],
-    dateRegistered: "2024-01-28",
-  },
-  {
-    id: 5,
-    firstName: "Pedro",
-    lastName: "Dela Cruz",
-    middleName: "Jose",
-    age: 73,
-    gender: "Male",
-    civilStatus: "Married",
-    address: "Lapu-Lapu St., Zone 4",
-    houseNumber: "567",
-    contact: "09444555666",
-    occupation: "Retired",
-    status: ["Senior Citizen", "Voter"],
-    dateRegistered: "2024-02-05",
-  },
+// Form schema
+const residentFormSchema = z.object({
+  first_name: z.string().min(1, "First name is required"),
+  last_name: z.string().min(1, "Last name is required"),
+  middle_name: z.string().optional(),
+  age: z.number().min(1, "Age must be at least 1").max(150, "Age must be less than 150"),
+  gender: z.enum(["Male", "Female"], { message: "Gender is required" }),
+  civil_status: z.enum(["Single", "Married", "Widow", "Widower", "Separated"], { message: "Civil status is required" }),
+  address: z.string().min(1, "Address is required"),
+  house_number: z.string().optional(),
+  contact: z.string().optional(),
+  occupation: z.string().optional(),
+  status: z.array(z.string()),
+});
+
+type ResidentFormData = z.infer<typeof residentFormSchema>;
+
+// Available status options
+const statusOptions = [
+  "Voter",
+  "Senior Citizen", 
+  "PWD",
+  "4Ps Beneficiary",
+  "Head of Household",
+  "Healthcare Worker",
+  "Student",
+  "Solo Parent"
 ];
 
 export default function ResidentsModule() {
-  const [residents] = useState(mockResidents);
+  const [residents, setResidents] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
+  const form = useForm<ResidentFormData>({
+    resolver: zodResolver(residentFormSchema),
+    defaultValues: {
+      first_name: "",
+      last_name: "",
+      middle_name: "",
+      age: 0,
+      gender: "Male",
+      civil_status: "Single",
+      address: "",
+      house_number: "",
+      contact: "",
+      occupation: "",
+      status: [],
+    },
+  });
+
+  // Fetch residents from database
+  const fetchResidents = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('residents')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setResidents(data || []);
+    } catch (error) {
+      console.error('Error fetching residents:', error);
+      toast.error('Failed to load residents');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load residents on component mount
+  useEffect(() => {
+    fetchResidents();
+  }, []);
+
+  // Filter residents
   const filteredResidents = residents.filter((resident) => {
     const matchesSearch = 
-      resident.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      resident.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      resident.address.toLowerCase().includes(searchTerm.toLowerCase());
+      resident.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      resident.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      resident.address?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === "all" || 
-      resident.status.some(status => status.toLowerCase().includes(statusFilter.toLowerCase()));
+      resident.status?.some((status: string) => status.toLowerCase().includes(statusFilter.toLowerCase()));
     
     return matchesSearch && matchesStatus;
   });
+
+  // Handle form submission
+  const onSubmit = async (data: ResidentFormData) => {
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) {
+        toast.error('You must be logged in to add residents');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('residents')
+        .insert({
+          ...data,
+          user_id: user.user.id,
+        });
+
+      if (error) throw error;
+
+      toast.success('Resident added successfully');
+      setIsAddDialogOpen(false);
+      form.reset();
+      fetchResidents();
+    } catch (error) {
+      console.error('Error adding resident:', error);
+      toast.error('Failed to add resident');
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -176,77 +207,222 @@ export default function ResidentsModule() {
                 Add Resident
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Add New Resident</DialogTitle>
                 <DialogDescription>
                   Fill in the resident's information to add them to the system.
                 </DialogDescription>
               </DialogHeader>
-              <div className="grid grid-cols-2 gap-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name</Label>
-                  <Input id="firstName" placeholder="Enter first name" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name</Label>
-                  <Input id="lastName" placeholder="Enter last name" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="middleName">Middle Name</Label>
-                  <Input id="middleName" placeholder="Enter middle name" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="age">Age</Label>
-                  <Input id="age" type="number" placeholder="Enter age" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="gender">Gender</Label>
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select gender" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="male">Male</SelectItem>
-                      <SelectItem value="female">Female</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="civilStatus">Civil Status</Label>
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select civil status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="single">Single</SelectItem>
-                      <SelectItem value="married">Married</SelectItem>
-                      <SelectItem value="widow">Widow/Widower</SelectItem>
-                      <SelectItem value="separated">Separated</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2 col-span-2">
-                  <Label htmlFor="address">Address</Label>
-                  <Textarea id="address" placeholder="Enter complete address" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="contact">Contact Number</Label>
-                  <Input id="contact" placeholder="Enter contact number" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="occupation">Occupation</Label>
-                  <Input id="occupation" placeholder="Enter occupation" />
-                </div>
-              </div>
-              <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={() => setIsAddDialogOpen(false)}>
-                  Add Resident
-                </Button>
-              </div>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="first_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>First Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter first name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="last_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Last Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter last name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="middle_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Middle Name (Optional)</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter middle name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="age"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Age</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              placeholder="Enter age" 
+                              {...field}
+                              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="gender"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Gender</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select gender" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="Male">Male</SelectItem>
+                              <SelectItem value="Female">Female</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="civil_status"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Civil Status</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select civil status" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="Single">Single</SelectItem>
+                              <SelectItem value="Married">Married</SelectItem>
+                              <SelectItem value="Widow">Widow</SelectItem>
+                              <SelectItem value="Widower">Widower</SelectItem>
+                              <SelectItem value="Separated">Separated</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="house_number"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>House Number (Optional)</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter house number" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="contact"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Contact Number (Optional)</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter contact number" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <FormField
+                    control={form.control}
+                    name="address"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Address</FormLabel>
+                        <FormControl>
+                          <Textarea placeholder="Enter complete address" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="occupation"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Occupation (Optional)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter occupation" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="status"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Status (Select all that apply)</FormLabel>
+                        <div className="grid grid-cols-2 gap-2">
+                          {statusOptions.map((status) => (
+                            <div key={status} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={status}
+                                checked={field.value?.includes(status)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    field.onChange([...(field.value || []), status]);
+                                  } else {
+                                    field.onChange(field.value?.filter((s) => s !== status));
+                                  }
+                                }}
+                              />
+                              <label htmlFor={status} className="text-sm font-medium">
+                                {status}
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="flex justify-end space-x-2 pt-4">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => setIsAddDialogOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={form.formState.isSubmitting}>
+                      {form.formState.isSubmitting && (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      )}
+                      Add Resident
+                    </Button>
+                  </div>
+                </form>
+              </Form>
             </DialogContent>
           </Dialog>
         </div>
@@ -291,76 +467,89 @@ export default function ResidentsModule() {
           <CardDescription>Complete list of registered residents</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>House No.</TableHead>
-                <TableHead>Address</TableHead>
-                <TableHead>Age</TableHead>
-                <TableHead>Contact</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredResidents.map((resident) => (
-                <TableRow key={resident.id}>
-                  <TableCell className="font-medium">
-                    {resident.id.toString().padStart(4, '0')}
-                  </TableCell>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">
-                        {resident.firstName} {resident.lastName}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {resident.gender} • {resident.civilStatus}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-mono text-sm">
-                    {resident.houseNumber}
-                  </TableCell>
-                  <TableCell className="max-w-xs">
-                    {resident.houseNumber} {resident.address}
-                  </TableCell>
-                  <TableCell>{resident.age}</TableCell>
-                  <TableCell className="font-mono text-sm">
-                    {resident.contact}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {resident.status.slice(0, 2).map((status, index) => (
-                        <Badge key={index} variant="outline" className={`text-xs ${getStatusColor(status)}`}>
-                          {status}
-                        </Badge>
-                      ))}
-                      {resident.status.length > 2 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{resident.status.length - 2}
-                        </Badge>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="sm">
-                        <Eye className="h-3 w-3" />
-                      </Button>
-                      <Button variant="ghost" size="sm">
-                        <Edit className="h-3 w-3" />
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <FileText className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </TableCell>
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin" />
+              <span className="ml-2">Loading residents...</span>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>House No.</TableHead>
+                  <TableHead>Address</TableHead>
+                  <TableHead>Age</TableHead>
+                  <TableHead>Contact</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredResidents.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8">
+                      {searchTerm || statusFilter !== "all" 
+                        ? "No residents found matching your search criteria." 
+                        : "No residents added yet. Click 'Add Resident' to get started."}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredResidents.map((resident) => (
+                    <TableRow key={resident.id}>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">
+                            {resident.first_name} {resident.last_name}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {resident.gender} • {resident.civil_status}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {resident.house_number || "N/A"}
+                      </TableCell>
+                      <TableCell className="max-w-xs">
+                        {resident.address}
+                      </TableCell>
+                      <TableCell>{resident.age}</TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {resident.contact || "N/A"}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {resident.status?.slice(0, 2).map((status: string, index: number) => (
+                            <Badge key={index} variant="outline" className={`text-xs ${getStatusColor(status)}`}>
+                              {status}
+                            </Badge>
+                          ))}
+                          {resident.status?.length > 2 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{resident.status.length - 2}
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="sm">
+                            <Eye className="h-3 w-3" />
+                          </Button>
+                          <Button variant="ghost" size="sm">
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                          <Button variant="outline" size="sm">
+                            <FileText className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
