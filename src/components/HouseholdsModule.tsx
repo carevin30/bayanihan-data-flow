@@ -36,6 +36,8 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import HouseholdDetailsDialog from "./HouseholdDetailsDialog";
+import EditHouseholdDialog from "./EditHouseholdDialog";
 
 interface Household {
   house_number: string;
@@ -44,6 +46,12 @@ interface Household {
   total_members: number;
   head_of_household?: string;
   contacts: string[];
+  utilities?: {
+    electricity: boolean;
+    water: boolean;
+    internet: boolean;
+  };
+  monthly_income?: number;
 }
 
 export default function HouseholdsModule() {
@@ -52,6 +60,9 @@ export default function HouseholdsModule() {
   const [searchTerm, setSearchTerm] = useState("");
   const [zoneFilter, setZoneFilter] = useState("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [selectedHousehold, setSelectedHousehold] = useState<Household | null>(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   // Fetch residents and group by house number
   const fetchHouseholds = async () => {
@@ -122,6 +133,27 @@ export default function HouseholdsModule() {
     
     return matchesSearch && matchesZone;
   });
+
+  const handleViewHousehold = (household: Household) => {
+    setSelectedHousehold(household);
+    setIsViewDialogOpen(true);
+  };
+
+  const handleEditHousehold = (household: Household) => {
+    setSelectedHousehold(household);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleSaveHousehold = (updatedHousehold: Household) => {
+    // Update the household in the local state
+    setHouseholds(prev => 
+      prev.map(h => 
+        h.house_number === updatedHousehold.house_number 
+          ? updatedHousehold 
+          : h
+      )
+    );
+  };
 
   const getConnectionStatus = (hasConnection: boolean) => {
     return hasConnection ? 
@@ -302,14 +334,28 @@ export default function HouseholdsModule() {
                   <div className="pt-2 border-t border-border">
                     <div className="flex justify-between">
                       <div className="flex space-x-1">
-                        <Button variant="ghost" size="sm">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleViewHousehold(household)}
+                          title="View Details"
+                        >
                           <Eye className="h-3 w-3" />
                         </Button>
-                        <Button variant="ghost" size="sm">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleEditHousehold(household)}
+                          title="Edit Household"
+                        >
                           <Edit className="h-3 w-3" />
                         </Button>
                       </div>
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleViewHousehold(household)}
+                      >
                         <Users className="h-3 w-3 mr-1" />
                         View All
                       </Button>
@@ -321,6 +367,20 @@ export default function HouseholdsModule() {
           )}
         </div>
       )}
+
+      {/* Dialogs */}
+      <HouseholdDetailsDialog
+        household={selectedHousehold}
+        open={isViewDialogOpen}
+        onOpenChange={setIsViewDialogOpen}
+      />
+      
+      <EditHouseholdDialog
+        household={selectedHousehold}
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        onSave={handleSaveHousehold}
+      />
 
       {/* Stats Footer */}
       <Card>
