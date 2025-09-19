@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      households: {
+        Row: {
+          address: string | null
+          created_at: string
+          id: string
+          house_number: string
+          monthly_income: number | null
+          updated_at: string
+          user_id: string
+          utilities: Json | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          id?: string
+          house_number: string
+          monthly_income?: number | null
+          updated_at?: string
+          user_id: string
+          utilities?: Json | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          id?: string
+          house_number?: string
+          monthly_income?: number | null
+          updated_at?: string
+          user_id?: string
+          utilities?: Json | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string

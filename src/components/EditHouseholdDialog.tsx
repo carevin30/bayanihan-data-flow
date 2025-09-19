@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Home, Zap, Droplets, Wifi, Banknote, Save, X } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Household {
   house_number: string;
@@ -36,6 +37,7 @@ export default function EditHouseholdDialog({
   onOpenChange,
   onSave,
 }: EditHouseholdDialogProps) {
+  const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     address: "",
     utilities: {
@@ -60,8 +62,40 @@ export default function EditHouseholdDialog({
     }
   }, [household]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!household) return;
+
+    try {
+      setSaving(true);
+      
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("You must be logged in to save household data");
+        return;
+      }
+
+      // Prepare the data for database
+      const householdData = {
+        house_number: household.house_number,
+        address: formData.address,
+        user_id: user.id,
+        utilities: formData.utilities,
+        monthly_income: formData.monthly_income ? parseFloat(formData.monthly_income) : null,
+      };
+
+      // Try to update existing record, or insert new one
+      const { error } = await supabase
+        .from('households')
+        .upsert(householdData, {
+          onConflict: 'house_number,user_id'
+        });
+
+      if (error) {
+        console.error('Error saving household data:', error);
+        toast.error("Failed to save household information");
+        return;
+      }
 
     const updatedHousehold: Household = {
       ...household,
@@ -73,6 +107,12 @@ export default function EditHouseholdDialog({
     onSave(updatedHousehold);
     onOpenChange(false);
     toast.success("Household information updated successfully");
+    } catch (error) {
+      console.error('Error saving household:', error);
+      toast.error("Failed to save household information");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleUtilityChange = (utility: keyof typeof formData.utilities, checked: boolean) => {
@@ -178,9 +218,10 @@ export default function EditHouseholdDialog({
             <X className="h-4 w-4 mr-2" />
             Cancel
           </Button>
-          <Button onClick={handleSave}>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />}
             <Save className="h-4 w-4 mr-2" />
-            Save Changes
+            {saving ? "Saving..." : "Save Changes"}
           </Button>
         </div>
       </DialogContent>
