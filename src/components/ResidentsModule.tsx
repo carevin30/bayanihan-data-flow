@@ -51,6 +51,8 @@ import {
   FileText,
   Loader2,
 } from "lucide-react";
+import ResidentDetailsDialog from "./ResidentDetailsDialog";
+import EditResidentDialog from "./EditResidentDialog";
 
 // Form schema
 const residentFormSchema = z.object({
@@ -87,6 +89,9 @@ export default function ResidentsModule() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [selectedResident, setSelectedResident] = useState<any>(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   const form = useForm<ResidentFormData>({
     resolver: zodResolver(residentFormSchema),
@@ -183,6 +188,45 @@ export default function ResidentsModule() {
       default:
         return "bg-muted text-muted-foreground";
     }
+  };
+
+  const handleViewResident = (resident: any) => {
+    setSelectedResident(resident);
+    setIsViewDialogOpen(true);
+  };
+
+  const handleEditResident = (resident: any) => {
+    setSelectedResident(resident);
+    setIsEditDialogOpen(true);
+  };
+
+  const generateCertificate = (resident: any) => {
+    // Simple certificate generation - could be enhanced with PDF generation
+    const certificateText = `
+BARANGAY CERTIFICATE
+
+This is to certify that ${resident.first_name} ${resident.last_name}, ${resident.age} years old, ${resident.gender}, is a bonafide resident of this barangay.
+
+Address: ${resident.address}
+${resident.house_number ? `House Number: ${resident.house_number}` : ''}
+Civil Status: ${resident.civil_status}
+${resident.occupation ? `Occupation: ${resident.occupation}` : ''}
+
+Date Issued: ${new Date().toLocaleDateString()}
+
+This certification is issued for whatever legal purpose it may serve.
+    `;
+
+    // Create and download as text file
+    const element = document.createElement('a');
+    const file = new Blob([certificateText], { type: 'text/plain' });
+    element.href = URL.createObjectURL(file);
+    element.download = `certificate_${resident.first_name}_${resident.last_name}.txt`;
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+    
+    toast.success('Certificate generated successfully');
   };
 
   return (
@@ -533,13 +577,28 @@ export default function ResidentsModule() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          <Button variant="ghost" size="sm">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleViewResident(resident)}
+                            title="View Details"
+                          >
                             <Eye className="h-3 w-3" />
                           </Button>
-                          <Button variant="ghost" size="sm">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleEditResident(resident)}
+                            title="Edit Resident"
+                          >
                             <Edit className="h-3 w-3" />
                           </Button>
-                          <Button variant="outline" size="sm">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => generateCertificate(resident)}
+                            title="Generate Certificate"
+                          >
                             <FileText className="h-3 w-3" />
                           </Button>
                         </div>
@@ -566,6 +625,26 @@ export default function ResidentsModule() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Dialogs */}
+      <ResidentDetailsDialog
+        resident={selectedResident}
+        isOpen={isViewDialogOpen}
+        onClose={() => {
+          setIsViewDialogOpen(false);
+          setSelectedResident(null);
+        }}
+      />
+      
+      <EditResidentDialog
+        resident={selectedResident}
+        isOpen={isEditDialogOpen}
+        onClose={() => {
+          setIsEditDialogOpen(false);
+          setSelectedResident(null);
+        }}
+        onUpdate={fetchResidents}
+      />
     </div>
   );
 }

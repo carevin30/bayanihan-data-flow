@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,96 +32,93 @@ import {
   Phone,
   Calendar,
   Home,
+  Loader2,
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
-// Mock household data
-const mockHouseholds = [
-  {
-    id: 1,
-    houseNumber: "123",
-    address: "Mabini St., Zone 1",
-    headOfHousehold: "Juan Santos Cruz",
-    totalMembers: 4,
-    members: ["Juan Santos Cruz", "Maria Cruz", "Jose Cruz", "Ana Cruz"],
-    contact: "09123456789",
-    electricityConnection: true,
-    waterConnection: true,
-    sanitationFacility: "Flush toilet",
-    monthlyIncome: "₱25,000 - ₱35,000",
-    dateRegistered: "2024-01-15",
-  },
-  {
-    id: 2,
-    houseNumber: "456",
-    address: "Rizal Ave., Zone 2",
-    headOfHousehold: "Maria Lopez Garcia",
-    totalMembers: 2,
-    members: ["Maria Lopez Garcia", "Roberto Garcia"],
-    contact: "09987654321",
-    electricityConnection: true,
-    waterConnection: false,
-    sanitationFacility: "Shared latrine",
-    monthlyIncome: "₱15,000 - ₱25,000",
-    dateRegistered: "2024-02-20",
-  },
-  {
-    id: 3,
-    houseNumber: "789",
-    address: "Del Pilar St., Zone 3",
-    headOfHousehold: "Roberto Rivera Mendoza",
-    totalMembers: 1,
-    members: ["Roberto Rivera Mendoza"],
-    contact: "09876543210",
-    electricityConnection: false,
-    waterConnection: true,
-    sanitationFacility: "Pit latrine",
-    monthlyIncome: "₱10,000 - ₱15,000",
-    dateRegistered: "2024-03-10",
-  },
-  {
-    id: 4,
-    houseNumber: "234",
-    address: "Bonifacio St., Zone 1",
-    headOfHousehold: "Ana Santos Reyes",
-    totalMembers: 3,
-    members: ["Ana Santos Reyes", "Carlos Reyes", "Sofia Reyes"],
-    contact: "09111222333",
-    electricityConnection: true,
-    waterConnection: true,
-    sanitationFacility: "Flush toilet",
-    monthlyIncome: "₱35,000 - ₱50,000",
-    dateRegistered: "2024-01-28",
-  },
-  {
-    id: 5,
-    houseNumber: "567",
-    address: "Lapu-Lapu St., Zone 4",
-    headOfHousehold: "Pedro Jose Dela Cruz",
-    totalMembers: 2,
-    members: ["Pedro Jose Dela Cruz", "Elena Dela Cruz"],
-    contact: "09444555666",
-    electricityConnection: true,
-    waterConnection: true,
-    sanitationFacility: "Flush toilet",
-    monthlyIncome: "₱20,000 - ₱30,000",
-    dateRegistered: "2024-02-05",
-  },
-];
+interface Household {
+  house_number: string;
+  address: string;
+  residents: any[];
+  total_members: number;
+  head_of_household?: string;
+  contacts: string[];
+}
 
 export default function HouseholdsModule() {
-  const [households] = useState(mockHouseholds);
+  const [households, setHouseholds] = useState<Household[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [zoneFilter, setZoneFilter] = useState("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 
+  // Fetch residents and group by house number
+  const fetchHouseholds = async () => {
+    try {
+      setLoading(true);
+      const { data: residents, error } = await supabase
+        .from('residents')
+        .select('*')
+        .order('house_number', { ascending: true });
+
+      if (error) throw error;
+
+      // Group residents by house number
+      const groupedByHouse = residents?.reduce((acc: any, resident: any) => {
+        const houseNumber = resident.house_number || 'No House Number';
+        
+        if (!acc[houseNumber]) {
+          acc[houseNumber] = {
+            house_number: houseNumber,
+            address: resident.address,
+            residents: [],
+            total_members: 0,
+            contacts: []
+          };
+        }
+        
+        acc[houseNumber].residents.push(resident);
+        acc[houseNumber].total_members += 1;
+        
+        if (resident.contact && !acc[houseNumber].contacts.includes(resident.contact)) {
+          acc[houseNumber].contacts.push(resident.contact);
+        }
+
+        // Set head of household (first resident with "Head of Household" status or first resident)
+        if (!acc[houseNumber].head_of_household) {
+          if (resident.status?.includes("Head of Household")) {
+            acc[houseNumber].head_of_household = `${resident.first_name} ${resident.last_name}`;
+          } else if (acc[houseNumber].residents.length === 1) {
+            acc[houseNumber].head_of_household = `${resident.first_name} ${resident.last_name}`;
+          }
+        }
+        
+        return acc;
+      }, {}) || {};
+
+      const householdsArray = Object.values(groupedByHouse) as Household[];
+      setHouseholds(householdsArray);
+    } catch (error) {
+      console.error('Error fetching households:', error);
+      toast.error('Failed to load households');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchHouseholds();
+  }, []);
+
   const filteredHouseholds = households.filter((household) => {
     const matchesSearch = 
-      household.houseNumber.includes(searchTerm) ||
-      household.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      household.headOfHousehold.toLowerCase().includes(searchTerm.toLowerCase());
+      household.house_number?.toString().includes(searchTerm) ||
+      household.address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      household.head_of_household?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesZone = zoneFilter === "all" || 
-      household.address.toLowerCase().includes(zoneFilter.toLowerCase());
+      household.address?.toLowerCase().includes(zoneFilter.toLowerCase());
     
     return matchesSearch && matchesZone;
   });
@@ -229,92 +226,101 @@ export default function HouseholdsModule() {
       </Card>
 
       {/* Households Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {filteredHouseholds.map((household) => (
-          <Card key={household.id} className="hover:shadow-md transition-shadow">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div>
-                  <CardTitle className="text-lg flex items-center">
-                    <Home className="h-4 w-4 mr-2" />
-                    House #{household.houseNumber}
-                  </CardTitle>
-                  <CardDescription className="flex items-center mt-1">
-                    <MapPin className="h-3 w-3 mr-1" />
-                    {household.address}
-                  </CardDescription>
-                </div>
-                <Badge variant="outline" className="text-xs">
-                  ID: H{household.id.toString().padStart(3, '0')}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center text-sm">
-                  <Users className="h-3 w-3 mr-2 text-muted-foreground" />
-                  <span className="text-muted-foreground">
-                    Head: <span className="font-medium text-foreground">{household.headOfHousehold}</span>
-                  </span>
-                </div>
-                <div className="flex items-center text-sm">
-                  <Users className="h-3 w-3 mr-2 text-muted-foreground" />
-                  <span className="text-muted-foreground">
-                    {household.totalMembers} member{household.totalMembers > 1 ? 's' : ''}
-                  </span>
-                </div>
-                <div className="flex items-center text-sm">
-                  <Phone className="h-3 w-3 mr-2 text-muted-foreground" />
-                  <span className="text-muted-foreground">{household.contact}</span>
-                </div>
-                <div className="flex items-center text-sm">
-                  <Calendar className="h-3 w-3 mr-2 text-muted-foreground" />
-                  <span className="text-muted-foreground">Registered: {household.dateRegistered}</span>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Utilities:</p>
-                <div className="flex flex-wrap gap-2">
-                  <Badge className={`text-xs ${getConnectionStatus(household.electricityConnection)}`}>
-                    Electricity: {household.electricityConnection ? 'Connected' : 'No Connection'}
-                  </Badge>
-                  <Badge className={`text-xs ${getConnectionStatus(household.waterConnection)}`}>
-                    Water: {household.waterConnection ? 'Connected' : 'No Connection'}
-                  </Badge>
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  Sanitation: {household.sanitationFacility}
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <p className="text-sm font-medium">Monthly Income:</p>
-                <Badge variant="outline" className="text-xs">
-                  {household.monthlyIncome}
-                </Badge>
-              </div>
-
-              <div className="pt-2 border-t border-border">
-                <div className="flex justify-between">
-                  <div className="flex space-x-1">
-                    <Button variant="ghost" size="sm">
-                      <Eye className="h-3 w-3" />
-                    </Button>
-                    <Button variant="ghost" size="sm">
-                      <Edit className="h-3 w-3" />
-                    </Button>
+      {loading ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span className="ml-2">Loading households...</span>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {filteredHouseholds.length === 0 ? (
+            <div className="col-span-full text-center py-8 text-muted-foreground">
+              {searchTerm || zoneFilter !== "all" 
+                ? "No households found matching your search criteria." 
+                : "No households found. Add residents with house numbers to see households here."}
+            </div>
+          ) : (
+            filteredHouseholds.map((household, index) => (
+              <Card key={household.house_number + index} className="hover:shadow-md transition-shadow">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle className="text-lg flex items-center">
+                        <Home className="h-4 w-4 mr-2" />
+                        House #{household.house_number}
+                      </CardTitle>
+                      <CardDescription className="flex items-center mt-1">
+                        <MapPin className="h-3 w-3 mr-1" />
+                        {household.address}
+                      </CardDescription>
+                    </div>
+                    <Badge variant="outline" className="text-xs">
+                      {household.total_members} members
+                    </Badge>
                   </div>
-                  <Button variant="outline" size="sm">
-                    <Users className="h-3 w-3 mr-1" />
-                    Members
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    {household.head_of_household && (
+                      <div className="flex items-center text-sm">
+                        <Users className="h-3 w-3 mr-2 text-muted-foreground" />
+                        <span className="text-muted-foreground">
+                          Head: <span className="font-medium text-foreground">{household.head_of_household}</span>
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex items-center text-sm">
+                      <Users className="h-3 w-3 mr-2 text-muted-foreground" />
+                      <span className="text-muted-foreground">
+                        {household.total_members} member{household.total_members > 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    {household.contacts.length > 0 && (
+                      <div className="flex items-center text-sm">
+                        <Phone className="h-3 w-3 mr-2 text-muted-foreground" />
+                        <span className="text-muted-foreground">{household.contacts.join(", ")}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Residents:</p>
+                    <div className="space-y-1">
+                      {household.residents.slice(0, 3).map((resident, idx) => (
+                        <div key={idx} className="text-xs text-muted-foreground">
+                          {resident.first_name} {resident.last_name} ({resident.age}y, {resident.gender})
+                        </div>
+                      ))}
+                      {household.residents.length > 3 && (
+                        <div className="text-xs text-muted-foreground">
+                          +{household.residents.length - 3} more residents
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-border">
+                    <div className="flex justify-between">
+                      <div className="flex space-x-1">
+                        <Button variant="ghost" size="sm">
+                          <Eye className="h-3 w-3" />
+                        </Button>
+                        <Button variant="ghost" size="sm">
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      <Button variant="outline" size="sm">
+                        <Users className="h-3 w-3 mr-1" />
+                        View All
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+      )}
 
       {/* Stats Footer */}
       <Card>
@@ -324,7 +330,7 @@ export default function HouseholdsModule() {
               Showing {filteredHouseholds.length} of {households.length} households
             </span>
             <span>
-              Total residents: {households.reduce((sum, h) => sum + h.totalMembers, 0)}
+              Total residents: {households.reduce((sum, h) => sum + h.total_members, 0)}
             </span>
             <span>
               Last updated: {new Date().toLocaleDateString()}
