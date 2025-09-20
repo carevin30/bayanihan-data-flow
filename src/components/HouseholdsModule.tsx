@@ -38,6 +38,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import HouseholdDetailsDialog from "./HouseholdDetailsDialog";
 import EditHouseholdDialog from "./EditHouseholdDialog";
+import AddHouseholdDialog from "./AddHouseholdDialog";
 
 interface Household {
   house_number: string;
@@ -176,52 +177,13 @@ export default function HouseholdsModule() {
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Household
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Add New Household</DialogTitle>
-                <DialogDescription>
-                  Register a new household in the barangay system.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid grid-cols-2 gap-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="houseNumber">House Number</Label>
-                  <Input id="houseNumber" placeholder="Enter house number" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="headOfHousehold">Head of Household</Label>
-                  <Input id="headOfHousehold" placeholder="Full name" />
-                </div>
-                <div className="space-y-2 col-span-2">
-                  <Label htmlFor="address">Address</Label>
-                  <Textarea id="address" placeholder="Street, Zone/Purok" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="contact">Contact Number</Label>
-                  <Input id="contact" placeholder="Enter contact number" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="totalMembers">Total Members</Label>
-                  <Input id="totalMembers" type="number" placeholder="Number of members" />
-                </div>
-              </div>
-              <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={() => setIsAddDialogOpen(false)}>
-                  Add Household
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <Button 
+            size="sm"
+            onClick={() => setIsAddDialogOpen(true)}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Household
+          </Button>
         </div>
       </div>
 
@@ -380,6 +342,12 @@ export default function HouseholdsModule() {
         open={isEditDialogOpen}
         onOpenChange={setIsEditDialogOpen}
         onSave={handleSaveHousehold}
+      />
+
+      <AddHouseholdDialog
+        open={isAddDialogOpen}
+        onOpenChange={setIsAddDialogOpen}
+        onSuccess={fetchHouseholds}
       />
 
       {/* Stats Footer */}
