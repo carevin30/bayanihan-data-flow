@@ -17,31 +17,31 @@ export type Database = {
       households: {
         Row: {
           address: string | null
-          created_at: string
-          id: string
+          created_at: string | null
           house_number: string
+          id: string
           monthly_income: number | null
-          updated_at: string
+          updated_at: string | null
           user_id: string
           utilities: Json | null
         }
         Insert: {
           address?: string | null
-          created_at?: string
-          id?: string
+          created_at?: string | null
           house_number: string
+          id?: string
           monthly_income?: number | null
-          updated_at?: string
+          updated_at?: string | null
           user_id: string
           utilities?: Json | null
         }
         Update: {
           address?: string | null
-          created_at?: string
-          id?: string
+          created_at?: string | null
           house_number?: string
+          id?: string
           monthly_income?: number | null
-          updated_at?: string
+          updated_at?: string | null
           user_id?: string
           utilities?: Json | null
         }
