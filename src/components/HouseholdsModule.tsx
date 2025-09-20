@@ -76,7 +76,15 @@ export default function HouseholdsModule() {
 
       if (error) throw error;
 
-      // Group residents by house number
+      // Also fetch standalone households (without residents)
+      const { data: householdsData, error: householdsError } = await supabase
+        .from('households')
+        .select('*')
+        .order('house_number', { ascending: true });
+
+      if (householdsError) throw householdsError;
+
+      // Group residents by house number and merge with standalone households
       const groupedByHouse = residents?.reduce((acc: any, resident: any) => {
         const houseNumber = resident.house_number || 'No House Number';
         
@@ -85,6 +93,9 @@ export default function HouseholdsModule() {
             house_number: houseNumber,
             address: resident.address,
             residents: [],
+            utilities: {
+              electricity: false, water: false, internet: false
+            },
             total_members: 0,
             contacts: []
           };
@@ -108,6 +119,31 @@ export default function HouseholdsModule() {
         
         return acc;
       }, {}) || {};
+
+      // Add standalone households (those without residents)
+      householdsData?.forEach((household: any) => {
+        if (!groupedByHouse[household.house_number]) {
+          groupedByHouse[household.house_number] = {
+            house_number: household.house_number,
+            address: household.address || '',
+            residents: [],
+            total_members: 0,
+            contacts: [],
+            utilities: household.utilities || {
+              electricity: false, water: false, internet: false
+            },
+            monthly_income: household.monthly_income
+          };
+        } else {
+          // Update existing household with utilities and income data
+          groupedByHouse[household.house_number].utilities = household.utilities || {
+            electricity: false, water: false, internet: false
+          };
+          if (household.monthly_income) {
+            groupedByHouse[household.house_number].monthly_income = household.monthly_income;
+          }
+        }
+      });
 
       const householdsArray = Object.values(groupedByHouse) as Household[];
       setHouseholds(householdsArray);
