@@ -313,6 +313,15 @@ export default function HouseholdsModule() {
                     )}
                   </div>
 
+                  {/* Show utilities if available */}
+                  {household.utilities && (
+                    <div className="flex items-center text-xs text-muted-foreground gap-2">
+                      {household.utilities.electricity && <span className="bg-success/10 text-success px-2 py-1 rounded">⚡ Electric</span>}
+                      {household.utilities.water && <span className="bg-info/10 text-info px-2 py-1 rounded">💧 Water</span>}
+                      {household.utilities.internet && <span className="bg-primary/10 text-primary px-2 py-1 rounded">📶 Internet</span>}
+                    </div>
+                  )}
+
                   <div className="space-y-2">
                     <p className="text-sm font-medium">Residents:</p>
                     <div className="space-y-1">
@@ -324,6 +333,11 @@ export default function HouseholdsModule() {
                       {household.residents.length > 3 && (
                         <div className="text-xs text-muted-foreground">
                           +{household.residents.length - 3} more residents
+                        </div>
+                      )}
+                      {household.residents.length === 0 && (
+                        <div className="text-xs text-muted-foreground italic">
+                          No residents registered yet
                         </div>
                       )}
                     </div>
