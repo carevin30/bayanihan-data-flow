@@ -11,35 +11,30 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Search, Plus, Edit, UserCheck, Phone, Mail, Calendar, Clock, LogIn, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
 
 interface Official {
   id: string;
+  user_id: string;
   name: string;
   position: string;
   term: string;
-  contact: string;
-  email: string;
-  status: "on_duty" | "off_duty" | "active" | "inactive";
-  time_in?: string;
-  time_out?: string;
-  photo_url?: string;
-  user_id: string;
+  contact?: string | null;
+  email?: string | null;
+  status: string;
+  time_in?: string | null;
+  time_out?: string | null;
+  photo_url?: string | null;
   created_at: string;
   updated_at: string;
 }
 
-
 export default function BarangayOfficialsModule() {
   const [officials, setOfficials] = useState<Official[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingOfficial, setEditingOfficial] = useState<Official | null>(null);
-  const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
-
-  // Form state
   const [formData, setFormData] = useState({
     name: "",
     position: "",
@@ -47,6 +42,7 @@ export default function BarangayOfficialsModule() {
     contact: "",
     email: ""
   });
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchOfficials();
@@ -55,18 +51,18 @@ export default function BarangayOfficialsModule() {
   const fetchOfficials = async () => {
     try {
       const { data, error } = await supabase
-        .from("officials")
-        .select("*")
-        .order("created_at", { ascending: false });
+        .from('officials')
+        .select('*')
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setOfficials((data || []) as Official[]);
+      setOfficials(data || []);
     } catch (error) {
-      console.error("Error fetching officials:", error);
+      console.error('Error fetching officials:', error);
       toast({
         title: "Error",
         description: "Failed to fetch officials",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
@@ -104,130 +100,174 @@ export default function BarangayOfficialsModule() {
     setIsDialogOpen(true);
   };
 
-  const handleTimeIn = async (officialId: string) => {
-    try {
-      const { error } = await supabase
-        .from("officials")
-        .update({
-          status: "on_duty",
-          time_in: new Date().toISOString(),
-          time_out: null
-        })
-        .eq("id", officialId);
-
-      if (error) throw error;
-      
-      await fetchOfficials();
-      toast({
-        title: "Success",
-        description: "Official timed in successfully",
-      });
-    } catch (error) {
-      console.error("Error timing in:", error);
-      toast({
-        title: "Error",
-        description: "Failed to time in",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleTimeOut = async (officialId: string) => {
-    try {
-      const { error } = await supabase
-        .from("officials")
-        .update({
-          status: "off_duty",
-          time_out: new Date().toISOString()
-        })
-        .eq("id", officialId);
-
-      if (error) throw error;
-      
-      await fetchOfficials();
-      toast({
-        title: "Success",
-        description: "Official timed out successfully",
-      });
-    } catch (error) {
-      console.error("Error timing out:", error);
-      toast({
-        title: "Error",
-        description: "Failed to time out",
-        variant: "destructive",
-      });
-    }
-  };
-
   const handleSaveOfficial = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast({
           title: "Error",
-          description: "You must be logged in to manage officials",
-          variant: "destructive",
+          description: "You must be logged in to add officials",
+          variant: "destructive"
         });
         return;
       }
 
-      const officialData = {
-        ...formData,
-        user_id: user.id,
-        status: editingOfficial ? editingOfficial.status : "off_duty"
-      };
-
       if (editingOfficial) {
         const { error } = await supabase
-          .from("officials")
-          .update(officialData)
-          .eq("id", editingOfficial.id);
-        
+          .from('officials')
+          .update({
+            name: formData.name,
+            position: formData.position,
+            term: formData.term,
+            contact: formData.contact,
+            email: formData.email
+          })
+          .eq('id', editingOfficial.id);
+
         if (error) throw error;
+        toast({
+          title: "Success",
+          description: "Official updated successfully"
+        });
       } else {
         const { error } = await supabase
-          .from("officials")
-          .insert([officialData]);
-        
+          .from('officials')
+          .insert({
+            user_id: user.id,
+            name: formData.name,
+            position: formData.position,
+            term: formData.term,
+            contact: formData.contact,
+            email: formData.email,
+            status: 'off_duty'
+          });
+
         if (error) throw error;
+        toast({
+          title: "Success",
+          description: "Official added successfully"
+        });
       }
 
-      await fetchOfficials();
       setIsDialogOpen(false);
-      toast({
-        title: "Success",
-        description: `Official ${editingOfficial ? "updated" : "added"} successfully`,
-      });
+      fetchOfficials();
     } catch (error) {
-      console.error("Error saving official:", error);
+      console.error('Error saving official:', error);
       toast({
         title: "Error",
-        description: `Failed to ${editingOfficial ? "update" : "add"} official`,
-        variant: "destructive",
+        description: "Failed to save official",
+        variant: "destructive"
       });
     }
   };
+
+  const handleTimeInOut = async (official: Official) => {
+    try {
+      const isTimingIn = official.status === 'off_duty';
+      const now = new Date().toISOString();
+      
+      const updates: any = {
+        status: isTimingIn ? 'on_duty' : 'off_duty'
+      };
+
+      if (isTimingIn) {
+        updates.time_in = now;
+        updates.time_out = null;
+      } else {
+        updates.time_out = now;
+      }
+
+      const { error } = await supabase
+        .from('officials')
+        .update(updates)
+        .eq('id', official.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `${official.name} has ${isTimingIn ? 'timed in' : 'timed out'} successfully`
+      });
+
+      fetchOfficials();
+    } catch (error) {
+      console.error('Error updating time:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update time",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const formatTime = (timeString?: string) => {
+    if (!timeString) return "Not set";
+    return new Date(timeString).toLocaleString();
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'on_duty':
+        return <Badge variant="default" className="bg-green-500">On Duty</Badge>;
+      case 'off_duty':
+        return <Badge variant="secondary">Off Duty</Badge>;
+      case 'active':
+        return <Badge variant="default">Active</Badge>;
+      case 'inactive':
+        return <Badge variant="destructive">Inactive</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+
+  if (loading) {
+    return <div className="flex justify-center items-center h-64">Loading officials...</div>;
+  }
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-foreground">Barangay Officials</h1>
-        <p className="text-muted-foreground">Manage official profiles and council structure</p>
+        <p className="text-muted-foreground">Manage official profiles and track attendance</p>
       </div>
 
       {/* Council Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Total Officials</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-primary">{officials.length}</div>
-            <p className="text-xs text-muted-foreground">Active council members</p>
+            <p className="text-xs text-muted-foreground">Registered officials</p>
           </CardContent>
         </Card>
         
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">On Duty</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">
+              {officials.filter(o => o.status === 'on_duty').length}
+            </div>
+            <p className="text-xs text-muted-foreground">Currently working</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Off Duty</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">
+              {officials.filter(o => o.status === 'off_duty').length}
+            </div>
+            <p className="text-xs text-muted-foreground">Not working</p>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Current Term</CardTitle>
@@ -235,16 +275,6 @@ export default function BarangayOfficialsModule() {
           <CardContent>
             <div className="text-2xl font-bold text-primary">2023-2026</div>
             <p className="text-xs text-muted-foreground">3-year term period</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Positions Filled</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary">6/7</div>
-            <p className="text-xs text-muted-foreground">Active positions</p>
           </CardContent>
         </Card>
       </div>
@@ -255,7 +285,7 @@ export default function BarangayOfficialsModule() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Officials Directory</CardTitle>
-              <CardDescription>Complete list of barangay officials and their contact information</CardDescription>
+              <CardDescription>Manage barangay officials and track their attendance</CardDescription>
             </div>
             <Button onClick={handleAddOfficial} className="gap-2">
               <Plus className="h-4 w-4" />
@@ -298,10 +328,10 @@ export default function BarangayOfficialsModule() {
                 <TableRow>
                   <TableHead>Official</TableHead>
                   <TableHead>Position</TableHead>
-                  <TableHead>Term</TableHead>
-                  <TableHead>Contact</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Time In/Out</TableHead>
+                  <TableHead>Time In</TableHead>
+                  <TableHead>Time Out</TableHead>
+                  <TableHead>Contact</TableHead>
                   <TableHead className="w-32">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -323,62 +353,40 @@ export default function BarangayOfficialsModule() {
                       </div>
                     </TableCell>
                     <TableCell className="font-medium">{official.position}</TableCell>
-                    <TableCell>{official.term}</TableCell>
+                    <TableCell>
+                      {getStatusBadge(official.status)}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {formatTime(official.time_in)}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {formatTime(official.time_out)}
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1 text-sm">
                         <Phone className="h-3 w-3" />
-                        {official.contact}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={official.status === "on_duty" ? "default" : "secondary"}>
-                        {official.status === "on_duty" ? "On Duty" : official.status === "off_duty" ? "Off Duty" : official.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-xs space-y-1">
-                        {official.time_in && (
-                          <div className="flex items-center gap-1">
-                            <LogIn className="h-3 w-3 text-green-600" />
-                            <span>In: {format(new Date(official.time_in), "HH:mm")}</span>
-                          </div>
-                        )}
-                        {official.time_out && (
-                          <div className="flex items-center gap-1">
-                            <LogOut className="h-3 w-3 text-red-600" />
-                            <span>Out: {format(new Date(official.time_out), "HH:mm")}</span>
-                          </div>
-                        )}
+                        {official.contact || "N/A"}
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1">
-                        {official.status === "off_duty" ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleTimeIn(official.id)}
-                            className="h-8 w-8 p-0"
-                          >
-                            <LogIn className="h-3 w-3" />
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleTimeOut(official.id)}
-                            className="h-8 w-8 p-0"
-                          >
-                            <LogOut className="h-3 w-3" />
-                          </Button>
-                        )}
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => handleEditOfficial(official)}
-                          className="h-8 w-8 p-0"
                         >
-                          <Edit className="h-3 w-3" />
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleTimeInOut(official)}
+                        >
+                          {official.status === 'off_duty' ? (
+                            <LogIn className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <LogOut className="h-4 w-4 text-orange-600" />
+                          )}
                         </Button>
                       </div>
                     </TableCell>
@@ -388,19 +396,11 @@ export default function BarangayOfficialsModule() {
             </Table>
           </div>
 
-          {!loading && filteredOfficials.length === 0 && (
+          {filteredOfficials.length === 0 && (
             <div className="text-center py-8">
               <UserCheck className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold">No officials found</h3>
-              <p className="text-muted-foreground">
-                {officials.length === 0 ? "No officials added yet. Click 'Add Official' to get started." : "No officials match your search criteria."}
-              </p>
-            </div>
-          )}
-          
-          {loading && (
-            <div className="text-center py-8">
-              <div className="text-muted-foreground">Loading officials...</div>
+              <p className="text-muted-foreground">No officials match your search criteria.</p>
             </div>
           )}
         </CardContent>
@@ -424,12 +424,15 @@ export default function BarangayOfficialsModule() {
                 id="name"
                 placeholder="Enter full name"
                 value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                onChange={(e) => setFormData({...formData, name: e.target.value})}
               />
             </div>
             <div>
               <Label htmlFor="position">Position</Label>
-              <Select value={formData.position} onValueChange={(value) => setFormData(prev => ({ ...prev, position: value }))}>
+              <Select 
+                value={formData.position} 
+                onValueChange={(value) => setFormData({...formData, position: value})}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select position" />
                 </SelectTrigger>
@@ -450,7 +453,7 @@ export default function BarangayOfficialsModule() {
                 id="contact"
                 placeholder="09XXXXXXXXX"
                 value={formData.contact}
-                onChange={(e) => setFormData(prev => ({ ...prev, contact: e.target.value }))}
+                onChange={(e) => setFormData({...formData, contact: e.target.value})}
               />
             </div>
             <div>
@@ -460,7 +463,7 @@ export default function BarangayOfficialsModule() {
                 type="email"
                 placeholder="official@barangay.gov.ph"
                 value={formData.email}
-                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                onChange={(e) => setFormData({...formData, email: e.target.value})}
               />
             </div>
             <div>
@@ -469,7 +472,7 @@ export default function BarangayOfficialsModule() {
                 id="term"
                 placeholder="2023-2026"
                 value={formData.term}
-                onChange={(e) => setFormData(prev => ({ ...prev, term: e.target.value }))}
+                onChange={(e) => setFormData({...formData, term: e.target.value})}
               />
             </div>
             <div className="flex gap-2 pt-4">
