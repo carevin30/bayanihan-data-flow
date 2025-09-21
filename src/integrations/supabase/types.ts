@@ -47,6 +47,54 @@ export type Database = {
         }
         Relationships: []
       }
+      officials: {
+        Row: {
+          contact: string | null
+          created_at: string | null
+          email: string | null
+          id: string
+          name: string
+          photo_url: string | null
+          position: string
+          status: string | null
+          term: string
+          time_in: string | null
+          time_out: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          contact?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          photo_url?: string | null
+          position: string
+          status?: string | null
+          term: string
+          time_in?: string | null
+          time_out?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          contact?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          photo_url?: string | null
+          position?: string
+          status?: string | null
+          term?: string
+          time_in?: string | null
+          time_out?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
