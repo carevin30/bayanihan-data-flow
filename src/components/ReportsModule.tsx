@@ -8,19 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  Search, 
-  Plus, 
-  FileText, 
-  Download, 
-  Clock,
-  CheckCircle,
-  AlertTriangle,
-  XCircle,
-  MessageSquare,
-  Calendar,
-  User
-} from "lucide-react";
+import { Search, Plus, Download, FileText, Calendar, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -34,8 +22,6 @@ interface Report {
   date_reported: string;
   status: 'pending' | 'in-progress' | 'resolved' | 'rejected';
   priority: 'low' | 'medium' | 'high' | 'urgent';
-  assigned_to?: string | null;
-  notes?: string | null;
 }
 
 export default function ReportsModule() {
@@ -148,51 +134,17 @@ export default function ReportsModule() {
     return matchesSearch && matchesTab;
   });
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending': return 'bg-civic-warning text-civic-warning-foreground';
-      case 'in-progress': return 'bg-civic-info text-civic-info-foreground';
-      case 'resolved': return 'bg-civic-success text-civic-success-foreground';
-      case 'rejected': return 'bg-civic-danger text-civic-danger-foreground';
-      default: return 'bg-secondary text-secondary-foreground';
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'urgent': return 'bg-red-100 text-red-800 border-red-200';
-      case 'high': return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'low': return 'bg-green-100 text-green-800 border-green-200';
-      default: return 'bg-secondary text-secondary-foreground';
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'pending': return <Clock className="h-3 w-3" />;
-      case 'in-progress': return <AlertTriangle className="h-3 w-3" />;
-      case 'resolved': return <CheckCircle className="h-3 w-3" />;
-      case 'rejected': return <XCircle className="h-3 w-3" />;
-      default: return <Clock className="h-3 w-3" />;
-    }
-  };
-
-  const generateMonthlyReport = () => {
-    // Mock function for generating reports
-    console.log('Generating monthly report...');
-  };
-
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6">
+      {/* Header with Add Button */}
+      <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-foreground">Reports & Concerns</h2>
           <p className="text-muted-foreground">Manage resident concerns and generate barangay reports</p>
         </div>
         
-        <div className="flex gap-2 shrink-0">
-          <Button variant="outline" onClick={generateMonthlyReport}>
+        <div className="flex gap-2">
+          <Button variant="outline">
             <Download className="h-4 w-4 mr-2" />
             Generate Report
           </Button>
@@ -212,9 +164,7 @@ export default function ReportsModule() {
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="report-title" className="text-right">
-                    Title
-                  </Label>
+                  <Label htmlFor="report-title" className="text-right">Title</Label>
                   <Input 
                     id="report-title" 
                     placeholder="Brief description of the issue" 
@@ -224,9 +174,7 @@ export default function ReportsModule() {
                   />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="report-category" className="text-right">
-                    Category
-                  </Label>
+                  <Label htmlFor="report-category" className="text-right">Category</Label>
                   <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
                     <SelectTrigger className="col-span-3">
                       <SelectValue placeholder="Select category" />
@@ -239,9 +187,7 @@ export default function ReportsModule() {
                   </Select>
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="report-priority" className="text-right">
-                    Priority
-                  </Label>
+                  <Label htmlFor="report-priority" className="text-right">Priority</Label>
                   <Select value={formData.priority} onValueChange={(value) => setFormData({...formData, priority: value})}>
                     <SelectTrigger className="col-span-3">
                       <SelectValue placeholder="Select priority" />
@@ -255,9 +201,7 @@ export default function ReportsModule() {
                   </Select>
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="reported-by" className="text-right">
-                    Reported By
-                  </Label>
+                  <Label htmlFor="reported-by" className="text-right">Reported By</Label>
                   <Input 
                     id="reported-by" 
                     placeholder="Your name" 
@@ -267,9 +211,7 @@ export default function ReportsModule() {
                   />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="reporter-contact" className="text-right">
-                    Contact
-                  </Label>
+                  <Label htmlFor="reporter-contact" className="text-right">Contact</Label>
                   <Input 
                     id="reporter-contact" 
                     placeholder="Phone or email" 
@@ -279,9 +221,7 @@ export default function ReportsModule() {
                   />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="report-location" className="text-right">
-                    Location
-                  </Label>
+                  <Label htmlFor="report-location" className="text-right">Location</Label>
                   <Input 
                     id="report-location" 
                     placeholder="Where is the issue?" 
@@ -291,9 +231,7 @@ export default function ReportsModule() {
                   />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="report-description" className="text-right">
-                    Description
-                  </Label>
+                  <Label htmlFor="report-description" className="text-right">Description</Label>
                   <Textarea 
                     id="report-description" 
                     placeholder="Detailed description of the issue..." 
@@ -304,9 +242,7 @@ export default function ReportsModule() {
                 </div>
               </div>
               <DialogFooter>
-                <Button type="submit" onClick={handleSubmit}>
-                  Submit Report
-                </Button>
+                <Button type="submit" onClick={handleSubmit}>Submit Report</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -342,19 +278,10 @@ export default function ReportsModule() {
           <div className="grid gap-4">
             {filteredReports.map((report) => (
               <Card key={report.id} className="hover:shadow-md transition-shadow">
-                <CardHeader className="pb-3">
+                <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <CardTitle className="text-lg">{report.title}</CardTitle>
-                        <Badge className={getStatusColor(report.status)}>
-                          {getStatusIcon(report.status)}
-                          <span className="ml-1 capitalize">{report.status.replace('-', ' ')}</span>
-                        </Badge>
-                        <Badge variant="outline" className={getPriorityColor(report.priority)}>
-                          {report.priority.toUpperCase()}
-                        </Badge>
-                      </div>
+                      <CardTitle className="text-lg">{report.title}</CardTitle>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <FileText className="h-3 w-3" />
@@ -371,41 +298,24 @@ export default function ReportsModule() {
                         <Badge variant="outline">{report.category}</Badge>
                       </div>
                     </div>
-                    <Button variant="outline" size="sm">
-                      <MessageSquare className="h-4 w-4 mr-1" />
-                      View Details
-                    </Button>
                   </div>
                 </CardHeader>
-                <CardContent className="pt-0">
-                  <CardDescription className="text-sm mb-3">
-                    {report.description}
-                  </CardDescription>
-                  {report.assigned_to && (
-                    <div className="text-sm text-muted-foreground mb-2">
-                      <strong>Assigned to:</strong> {report.assigned_to}
-                    </div>
-                  )}
-                  {report.notes && (
-                    <div className="bg-civic-success/10 border border-civic-success/20 rounded-md p-3 text-sm">
-                      <strong className="text-civic-success">Notes:</strong>
-                      <p className="mt-1 text-foreground">{report.notes}</p>
-                    </div>
-                  )}
+                <CardContent>
+                  <CardDescription>{report.description}</CardDescription>
                 </CardContent>
               </Card>
             ))}
-          </div>
 
-          {filteredReports.length === 0 && (
-            <Card>
-              <CardContent className="text-center py-8">
-                <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-foreground mb-2">No reports found</h3>
-                <p className="text-muted-foreground">Try adjusting your search or tab selection.</p>
-              </CardContent>
-            </Card>
-          )}
+            {filteredReports.length === 0 && (
+              <Card>
+                <CardContent className="text-center py-8">
+                  <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-foreground mb-2">No reports found</h3>
+                  <p className="text-muted-foreground">Try adjusting your search or tab selection.</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
     </div>
