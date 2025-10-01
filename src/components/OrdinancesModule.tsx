@@ -1,9 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,52 +16,109 @@ import {
   Filter,
   Eye
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface Ordinance {
   id: string;
   number: string;
   title: string;
   category: string;
-  dateEnacted: string;
-  description: string;
-  status: 'active' | 'superseded' | 'repealed';
+  date_enacted: string;
+  description: string | null;
+  status: 'active' | 'amended' | 'repealed';
 }
 
-const mockOrdinances: Ordinance[] = [
-  {
-    id: '1',
-    number: 'ORD-2024-001',
-    title: 'Anti-Littering Ordinance',
-    category: 'Environment',
-    dateEnacted: '2024-01-15',
-    description: 'An ordinance prohibiting littering and imposing penalties for violations',
-    status: 'active'
-  },
-  {
-    id: '2',
-    number: 'ORD-2024-002', 
-    title: 'Business Permit Regulation',
-    category: 'Business',
-    dateEnacted: '2024-02-20',
-    description: 'Regulations for business permit applications and renewals',
-    status: 'active'
-  },
-  {
-    id: '3',
-    number: 'ORD-2023-015',
-    title: 'Curfew Hours for Minors',
-    category: 'Public Safety',
-    dateEnacted: '2023-12-10',
-    description: 'Establishing curfew hours for minors in the barangay',
-    status: 'superseded'
-  }
-];
-
 export default function OrdinancesModule() {
-  const [ordinances] = useState<Ordinance[]>(mockOrdinances);
+  const [ordinances, setOrdinances] = useState<Ordinance[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    number: '',
+    title: '',
+    category: '',
+    description: '',
+    date_enacted: new Date().toISOString().split('T')[0]
+  });
+  const { toast } = useToast();
+
+  useEffect(() => {
+    fetchOrdinances();
+  }, []);
+
+  const fetchOrdinances = async () => {
+    const { data, error } = await supabase
+      .from('ordinances')
+      .select('*')
+      .order('date_enacted', { ascending: false });
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch ordinances",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setOrdinances((data || []) as Ordinance[]);
+  };
+
+  const handleSubmit = async () => {
+    if (!formData.number || !formData.title || !formData.category) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to add ordinances",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const { error } = await supabase.from('ordinances').insert({
+      user_id: user.id,
+      number: formData.number,
+      title: formData.title,
+      category: formData.category,
+      description: formData.description,
+      date_enacted: formData.date_enacted,
+      status: 'active'
+    });
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add ordinance",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    toast({
+      title: "Success",
+      description: "Ordinance added successfully"
+    });
+
+    setIsAddModalOpen(false);
+    setFormData({
+      number: '',
+      title: '',
+      category: '',
+      description: '',
+      date_enacted: new Date().toISOString().split('T')[0]
+    });
+    fetchOrdinances();
+  };
 
   const categories = ['all', 'Environment', 'Business', 'Public Safety', 'Health', 'Transportation'];
   
@@ -109,19 +165,31 @@ export default function OrdinancesModule() {
                 <Label htmlFor="ordinance-number" className="text-right">
                   Number
                 </Label>
-                <Input id="ordinance-number" placeholder="ORD-2024-003" className="col-span-3" />
+                <Input 
+                  id="ordinance-number" 
+                  placeholder="ORD-2024-003" 
+                  className="col-span-3"
+                  value={formData.number}
+                  onChange={(e) => setFormData({...formData, number: e.target.value})}
+                />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="ordinance-title" className="text-right">
                   Title
                 </Label>
-                <Input id="ordinance-title" placeholder="Ordinance title" className="col-span-3" />
+                <Input 
+                  id="ordinance-title" 
+                  placeholder="Ordinance title" 
+                  className="col-span-3"
+                  value={formData.title}
+                  onChange={(e) => setFormData({...formData, title: e.target.value})}
+                />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="ordinance-category" className="text-right">
                   Category
                 </Label>
-                <Select>
+                <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
                   <SelectTrigger className="col-span-3">
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
@@ -133,14 +201,32 @@ export default function OrdinancesModule() {
                 </Select>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="ordinance-date" className="text-right">
+                  Date Enacted
+                </Label>
+                <Input 
+                  id="ordinance-date" 
+                  type="date"
+                  className="col-span-3"
+                  value={formData.date_enacted}
+                  onChange={(e) => setFormData({...formData, date_enacted: e.target.value})}
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="ordinance-description" className="text-right">
                   Description
                 </Label>
-                <Textarea id="ordinance-description" placeholder="Brief description..." className="col-span-3" />
+                <Textarea 
+                  id="ordinance-description" 
+                  placeholder="Brief description..." 
+                  className="col-span-3"
+                  value={formData.description}
+                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                />
               </div>
             </div>
             <DialogFooter>
-              <Button type="submit" onClick={() => setIsAddModalOpen(false)}>
+              <Button type="submit" onClick={handleSubmit}>
                 Save Ordinance
               </Button>
             </DialogFooter>
@@ -200,7 +286,7 @@ export default function OrdinancesModule() {
                     </span>
                     <span className="flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
-                      {new Date(ordinance.dateEnacted).toLocaleDateString()}
+                      {new Date(ordinance.date_enacted).toLocaleDateString()}
                     </span>
                     <Badge variant="outline">{ordinance.category}</Badge>
                   </div>

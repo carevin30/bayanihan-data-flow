@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,71 +19,131 @@ import {
   CheckCircle,
   AlertCircle
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface Activity {
   id: string;
   title: string;
   type: string;
-  description: string;
+  description: string | null;
   date: string;
-  time: string;
   location: string;
-  budget: number;
+  budget: number | null;
   attendees: number;
-  maxAttendees?: number;
+  max_attendees?: number | null;
   status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
   organizer: string;
+  contact: string | null;
 }
 
-const mockActivities: Activity[] = [
-  {
-    id: '1',
-    title: 'Community Clean-up Drive',
-    type: 'Environmental',
-    description: 'Monthly barangay clean-up activity focusing on public areas and waterways',
-    date: '2024-03-15',
-    time: '06:00 AM',
-    location: 'Barangay Hall - Main Street',
-    budget: 5000,
-    attendees: 45,
-    maxAttendees: 100,
-    status: 'upcoming',
-    organizer: 'Environment Committee'
-  },
-  {
-    id: '2',
-    title: 'Feeding Program for Children',
-    type: 'Social Services',
-    description: 'Monthly feeding program for malnourished children in the barangay',
-    date: '2024-03-10',
-    time: '10:00 AM',
-    location: 'Day Care Center',
-    budget: 15000,
-    attendees: 80,
-    maxAttendees: 120,
-    status: 'ongoing',
-    organizer: 'Health Committee'
-  },
-  {
-    id: '3',
-    title: 'Vaccination Drive - COVID-19 Booster',
-    type: 'Health',
-    description: 'Free COVID-19 booster vaccination for senior citizens and high-risk individuals',
-    date: '2024-02-28',
-    time: '09:00 AM',
-    location: 'Covered Court',
-    budget: 8000,
-    attendees: 150,
-    status: 'completed',
-    organizer: 'Health Committee'
-  }
-];
-
 export default function ActivitiesModule() {
-  const [activities] = useState<Activity[]>(mockActivities);
+  const [activities, setActivities] = useState<Activity[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTab, setSelectedTab] = useState('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    title: '',
+    type: '',
+    description: '',
+    date: new Date().toISOString().split('T')[0],
+    time: '09:00',
+    location: '',
+    budget: '',
+    max_attendees: '',
+    organizer: '',
+    contact: ''
+  });
+  const { toast } = useToast();
+
+  useEffect(() => {
+    fetchActivities();
+  }, []);
+
+  const fetchActivities = async () => {
+    const { data, error } = await supabase
+      .from('activities')
+      .select('*')
+      .order('date', { ascending: false });
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch activities",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setActivities((data || []) as Activity[]);
+  };
+
+  const handleSubmit = async () => {
+    if (!formData.title || !formData.type || !formData.date || !formData.location || !formData.organizer) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to add activities",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const activityDateTime = `${formData.date}T${formData.time}:00`;
+
+    const { error } = await supabase.from('activities').insert({
+      user_id: user.id,
+      title: formData.title,
+      type: formData.type,
+      description: formData.description,
+      date: activityDateTime,
+      location: formData.location,
+      budget: formData.budget ? parseFloat(formData.budget) : null,
+      attendees: 0,
+      max_attendees: formData.max_attendees ? parseInt(formData.max_attendees) : null,
+      organizer: formData.organizer,
+      contact: formData.contact,
+      status: 'upcoming'
+    });
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add activity",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    toast({
+      title: "Success",
+      description: "Activity added successfully"
+    });
+
+    setIsAddModalOpen(false);
+    setFormData({
+      title: '',
+      type: '',
+      description: '',
+      date: new Date().toISOString().split('T')[0],
+      time: '09:00',
+      location: '',
+      budget: '',
+      max_attendees: '',
+      organizer: '',
+      contact: ''
+    });
+    fetchActivities();
+  };
 
   const activityTypes = ['Environmental', 'Health', 'Social Services', 'Education', 'Sports', 'Cultural'];
   
@@ -135,58 +195,132 @@ export default function ActivitiesModule() {
                 Create a new barangay activity or program.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="activity-title" className="text-right">
-                  Title
-                </Label>
-                <Input id="activity-title" placeholder="Activity title" className="col-span-3" />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="activity-type" className="text-right">
-                  Type
-                </Label>
-                <Select>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {activityTypes.map(type => (
-                      <SelectItem key={type} value={type}>{type}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="activity-date" className="text-right">
-                  Date & Time
-                </Label>
-                <div className="col-span-3 flex gap-2">
-                  <Input id="activity-date" type="date" className="flex-1" />
-                  <Input id="activity-time" type="time" className="flex-1" />
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="activity-title" className="text-right">
+                    Title
+                  </Label>
+                  <Input 
+                    id="activity-title" 
+                    placeholder="Activity title" 
+                    className="col-span-3"
+                    value={formData.title}
+                    onChange={(e) => setFormData({...formData, title: e.target.value})}
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="activity-type" className="text-right">
+                    Type
+                  </Label>
+                  <Select value={formData.type} onValueChange={(value) => setFormData({...formData, type: value})}>
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {activityTypes.map(type => (
+                        <SelectItem key={type} value={type}>{type}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="activity-date" className="text-right">
+                    Date & Time
+                  </Label>
+                  <div className="col-span-3 flex gap-2">
+                    <Input 
+                      id="activity-date" 
+                      type="date" 
+                      className="flex-1"
+                      value={formData.date}
+                      onChange={(e) => setFormData({...formData, date: e.target.value})}
+                    />
+                    <Input 
+                      id="activity-time" 
+                      type="time" 
+                      className="flex-1"
+                      value={formData.time}
+                      onChange={(e) => setFormData({...formData, time: e.target.value})}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="activity-location" className="text-right">
+                    Location
+                  </Label>
+                  <Input 
+                    id="activity-location" 
+                    placeholder="Event location" 
+                    className="col-span-3"
+                    value={formData.location}
+                    onChange={(e) => setFormData({...formData, location: e.target.value})}
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="activity-organizer" className="text-right">
+                    Organizer
+                  </Label>
+                  <Input 
+                    id="activity-organizer" 
+                    placeholder="Organizing committee" 
+                    className="col-span-3"
+                    value={formData.organizer}
+                    onChange={(e) => setFormData({...formData, organizer: e.target.value})}
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="activity-contact" className="text-right">
+                    Contact
+                  </Label>
+                  <Input 
+                    id="activity-contact" 
+                    placeholder="Contact number" 
+                    className="col-span-3"
+                    value={formData.contact}
+                    onChange={(e) => setFormData({...formData, contact: e.target.value})}
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="activity-budget" className="text-right">
+                    Budget
+                  </Label>
+                  <Input 
+                    id="activity-budget" 
+                    type="number" 
+                    placeholder="0" 
+                    className="col-span-3"
+                    value={formData.budget}
+                    onChange={(e) => setFormData({...formData, budget: e.target.value})}
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="activity-max-attendees" className="text-right">
+                    Max Attendees
+                  </Label>
+                  <Input 
+                    id="activity-max-attendees" 
+                    type="number" 
+                    placeholder="Optional" 
+                    className="col-span-3"
+                    value={formData.max_attendees}
+                    onChange={(e) => setFormData({...formData, max_attendees: e.target.value})}
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="activity-description" className="text-right">
+                    Description
+                  </Label>
+                  <Textarea 
+                    id="activity-description" 
+                    placeholder="Activity description..." 
+                    className="col-span-3"
+                    value={formData.description}
+                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  />
                 </div>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="activity-location" className="text-right">
-                  Location
-                </Label>
-                <Input id="activity-location" placeholder="Event location" className="col-span-3" />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="activity-budget" className="text-right">
-                  Budget
-                </Label>
-                <Input id="activity-budget" type="number" placeholder="0" className="col-span-3" />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="activity-description" className="text-right">
-                  Description
-                </Label>
-                <Textarea id="activity-description" placeholder="Activity description..." className="col-span-3" />
-              </div>
-            </div>
             <DialogFooter>
-              <Button type="submit" onClick={() => setIsAddModalOpen(false)}>
+              <Button type="submit" onClick={handleSubmit}>
                 Save Activity
               </Button>
             </DialogFooter>
@@ -236,7 +370,7 @@ export default function ActivitiesModule() {
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
-                          {new Date(activity.date).toLocaleDateString()} at {activity.time}
+                          {new Date(activity.date).toLocaleString()}
                         </span>
                         <span className="flex items-center gap-1">
                           <MapPin className="h-3 w-3" />
@@ -254,20 +388,22 @@ export default function ActivitiesModule() {
                   <CardDescription className="text-sm mb-4">
                     {activity.description}
                   </CardDescription>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4 text-sm">
-                      <span className="flex items-center gap-1">
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                        <span>{activity.attendees}</span>
-                        {activity.maxAttendees && <span className="text-muted-foreground">/ {activity.maxAttendees}</span>}
-                        <span className="text-muted-foreground">attendees</span>
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <DollarSign className="h-4 w-4 text-muted-foreground" />
-                        <span>₱{activity.budget.toLocaleString()}</span>
-                        <span className="text-muted-foreground">budget</span>
-                      </span>
-                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4 text-sm">
+                        <span className="flex items-center gap-1">
+                          <Users className="h-4 w-4 text-muted-foreground" />
+                          <span>{activity.attendees}</span>
+                          {activity.max_attendees && <span className="text-muted-foreground">/ {activity.max_attendees}</span>}
+                          <span className="text-muted-foreground">attendees</span>
+                        </span>
+                        {activity.budget && (
+                          <span className="flex items-center gap-1">
+                            <DollarSign className="h-4 w-4 text-muted-foreground" />
+                            <span>₱{activity.budget.toLocaleString()}</span>
+                            <span className="text-muted-foreground">budget</span>
+                          </span>
+                        )}
+                      </div>
                     <div className="text-sm text-muted-foreground">
                       Organized by {activity.organizer}
                     </div>

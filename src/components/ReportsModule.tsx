@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -21,72 +21,129 @@ import {
   Calendar,
   User
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface Report {
   id: string;
-  ticketNumber: string;
+  ticket_number: string;
   title: string;
   category: string;
   description: string;
-  reportedBy: string;
-  dateSubmitted: string;
+  reporter_name: string;
+  date_reported: string;
   status: 'pending' | 'in-progress' | 'resolved' | 'rejected';
   priority: 'low' | 'medium' | 'high' | 'urgent';
-  assignedTo?: string;
-  resolution?: string;
+  assigned_to?: string | null;
+  notes?: string | null;
 }
 
-const mockReports: Report[] = [
-  {
-    id: '1',
-    ticketNumber: 'RPT-2024-001',
-    title: 'Broken Street Light on Rizal Street',
-    category: 'Infrastructure',
-    description: 'The street light near house #45 has been broken for 3 days, causing safety concerns for residents walking at night.',
-    reportedBy: 'Maria Santos',
-    dateSubmitted: '2024-03-01',
-    status: 'in-progress',
-    priority: 'high',
-    assignedTo: 'Public Works Committee'
-  },
-  {
-    id: '2',
-    ticketNumber: 'RPT-2024-002',
-    title: 'Noise Complaint - Construction Work',
-    category: 'Public Safety',
-    description: 'Construction work starting at 5 AM daily causing disturbance to residents. Work permits need verification.',
-    reportedBy: 'Juan dela Cruz',
-    dateSubmitted: '2024-03-05',
-    status: 'pending',
-    priority: 'medium'
-  },
-  {
-    id: '3',
-    ticketNumber: 'RPT-2024-003',
-    title: 'Stray Dogs in Residential Area',
-    category: 'Animal Control',
-    description: 'Pack of stray dogs roaming the streets causing concern for children safety.',
-    reportedBy: 'Ana Rodriguez',
-    dateSubmitted: '2024-02-28',
-    status: 'resolved',
-    priority: 'medium',
-    assignedTo: 'Health Committee',
-    resolution: 'Coordinated with city pound. Dogs have been safely captured and relocated.'
-  }
-];
-
 export default function ReportsModule() {
-  const [reports] = useState<Report[]>(mockReports);
+  const [reports, setReports] = useState<Report[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTab, setSelectedTab] = useState('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    title: '',
+    category: '',
+    priority: 'medium',
+    reporter_name: '',
+    reporter_contact: '',
+    description: '',
+    location: ''
+  });
+  const { toast } = useToast();
+
+  useEffect(() => {
+    fetchReports();
+  }, []);
+
+  const fetchReports = async () => {
+    const { data, error } = await supabase
+      .from('reports')
+      .select('*')
+      .order('date_reported', { ascending: false });
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch reports",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setReports((data || []) as Report[]);
+  };
+
+  const handleSubmit = async () => {
+    if (!formData.title || !formData.category || !formData.reporter_name || !formData.description) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to submit reports",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const ticketNumber = `RPT-${new Date().getFullYear()}-${String(reports.length + 1).padStart(3, '0')}`;
+
+    const { error } = await supabase.from('reports').insert({
+      user_id: user.id,
+      ticket_number: ticketNumber,
+      title: formData.title,
+      category: formData.category,
+      priority: formData.priority as 'low' | 'medium' | 'high' | 'urgent',
+      reporter_name: formData.reporter_name,
+      reporter_contact: formData.reporter_contact,
+      description: formData.description,
+      location: formData.location,
+      status: 'pending'
+    });
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to submit report",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    toast({
+      title: "Success",
+      description: "Report submitted successfully"
+    });
+
+    setIsAddModalOpen(false);
+    setFormData({
+      title: '',
+      category: '',
+      priority: 'medium',
+      reporter_name: '',
+      reporter_contact: '',
+      description: '',
+      location: ''
+    });
+    fetchReports();
+  };
 
   const categories = ['Infrastructure', 'Public Safety', 'Health', 'Environment', 'Animal Control', 'Utilities', 'Others'];
   
   const filteredReports = reports.filter(report => {
     const matchesSearch = report.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         report.ticketNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         report.reportedBy.toLowerCase().includes(searchTerm.toLowerCase());
+                         report.ticket_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         report.reporter_name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesTab = selectedTab === 'all' || report.status === selectedTab;
     return matchesSearch && matchesTab;
   });
@@ -158,13 +215,19 @@ export default function ReportsModule() {
                   <Label htmlFor="report-title" className="text-right">
                     Title
                   </Label>
-                  <Input id="report-title" placeholder="Brief description of the issue" className="col-span-3" />
+                  <Input 
+                    id="report-title" 
+                    placeholder="Brief description of the issue" 
+                    className="col-span-3"
+                    value={formData.title}
+                    onChange={(e) => setFormData({...formData, title: e.target.value})}
+                  />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="report-category" className="text-right">
                     Category
                   </Label>
-                  <Select>
+                  <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
                     <SelectTrigger className="col-span-3">
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
@@ -179,7 +242,7 @@ export default function ReportsModule() {
                   <Label htmlFor="report-priority" className="text-right">
                     Priority
                   </Label>
-                  <Select>
+                  <Select value={formData.priority} onValueChange={(value) => setFormData({...formData, priority: value})}>
                     <SelectTrigger className="col-span-3">
                       <SelectValue placeholder="Select priority" />
                     </SelectTrigger>
@@ -195,17 +258,53 @@ export default function ReportsModule() {
                   <Label htmlFor="reported-by" className="text-right">
                     Reported By
                   </Label>
-                  <Input id="reported-by" placeholder="Your name" className="col-span-3" />
+                  <Input 
+                    id="reported-by" 
+                    placeholder="Your name" 
+                    className="col-span-3"
+                    value={formData.reporter_name}
+                    onChange={(e) => setFormData({...formData, reporter_name: e.target.value})}
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="reporter-contact" className="text-right">
+                    Contact
+                  </Label>
+                  <Input 
+                    id="reporter-contact" 
+                    placeholder="Phone or email" 
+                    className="col-span-3"
+                    value={formData.reporter_contact}
+                    onChange={(e) => setFormData({...formData, reporter_contact: e.target.value})}
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="report-location" className="text-right">
+                    Location
+                  </Label>
+                  <Input 
+                    id="report-location" 
+                    placeholder="Where is the issue?" 
+                    className="col-span-3"
+                    value={formData.location}
+                    onChange={(e) => setFormData({...formData, location: e.target.value})}
+                  />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="report-description" className="text-right">
                     Description
                   </Label>
-                  <Textarea id="report-description" placeholder="Detailed description of the issue..." className="col-span-3 h-24" />
+                  <Textarea 
+                    id="report-description" 
+                    placeholder="Detailed description of the issue..." 
+                    className="col-span-3 h-24"
+                    value={formData.description}
+                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  />
                 </div>
               </div>
               <DialogFooter>
-                <Button type="submit" onClick={() => setIsAddModalOpen(false)}>
+                <Button type="submit" onClick={handleSubmit}>
                   Submit Report
                 </Button>
               </DialogFooter>
@@ -259,15 +358,15 @@ export default function ReportsModule() {
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <FileText className="h-3 w-3" />
-                          {report.ticketNumber}
+                          {report.ticket_number}
                         </span>
                         <span className="flex items-center gap-1">
                           <User className="h-3 w-3" />
-                          {report.reportedBy}
+                          {report.reporter_name}
                         </span>
                         <span className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
-                          {new Date(report.dateSubmitted).toLocaleDateString()}
+                          {new Date(report.date_reported).toLocaleDateString()}
                         </span>
                         <Badge variant="outline">{report.category}</Badge>
                       </div>
@@ -282,15 +381,15 @@ export default function ReportsModule() {
                   <CardDescription className="text-sm mb-3">
                     {report.description}
                   </CardDescription>
-                  {report.assignedTo && (
+                  {report.assigned_to && (
                     <div className="text-sm text-muted-foreground mb-2">
-                      <strong>Assigned to:</strong> {report.assignedTo}
+                      <strong>Assigned to:</strong> {report.assigned_to}
                     </div>
                   )}
-                  {report.resolution && (
+                  {report.notes && (
                     <div className="bg-civic-success/10 border border-civic-success/20 rounded-md p-3 text-sm">
-                      <strong className="text-civic-success">Resolution:</strong>
-                      <p className="mt-1 text-foreground">{report.resolution}</p>
+                      <strong className="text-civic-success">Notes:</strong>
+                      <p className="mt-1 text-foreground">{report.notes}</p>
                     </div>
                   )}
                 </CardContent>

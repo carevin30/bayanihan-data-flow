@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      activities: {
+        Row: {
+          attendees: number | null
+          budget: number | null
+          contact: string | null
+          created_at: string | null
+          date: string
+          description: string | null
+          id: string
+          location: string
+          max_attendees: number | null
+          organizer: string
+          status: string | null
+          tags: string[] | null
+          title: string
+          type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          attendees?: number | null
+          budget?: number | null
+          contact?: string | null
+          created_at?: string | null
+          date: string
+          description?: string | null
+          id?: string
+          location: string
+          max_attendees?: number | null
+          organizer: string
+          status?: string | null
+          tags?: string[] | null
+          title: string
+          type: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          attendees?: number | null
+          budget?: number | null
+          contact?: string | null
+          created_at?: string | null
+          date?: string
+          description?: string | null
+          id?: string
+          location?: string
+          max_attendees?: number | null
+          organizer?: string
+          status?: string | null
+          tags?: string[] | null
+          title?: string
+          type?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       households: {
         Row: {
           address: string | null
@@ -95,6 +152,48 @@ export type Database = {
         }
         Relationships: []
       }
+      ordinances: {
+        Row: {
+          category: string
+          created_at: string | null
+          date_enacted: string
+          description: string | null
+          id: string
+          number: string
+          pdf_url: string | null
+          status: string | null
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          date_enacted: string
+          description?: string | null
+          id?: string
+          number: string
+          pdf_url?: string | null
+          status?: string | null
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          date_enacted?: string
+          description?: string | null
+          id?: string
+          number?: string
+          pdf_url?: string | null
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -121,6 +220,66 @@ export type Database = {
           id?: string
           role?: string | null
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      reports: {
+        Row: {
+          assigned_to: string | null
+          category: string
+          created_at: string | null
+          date_reported: string | null
+          date_resolved: string | null
+          description: string
+          id: string
+          location: string | null
+          notes: string | null
+          priority: string | null
+          reporter_contact: string | null
+          reporter_name: string
+          status: string | null
+          ticket_number: string
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          category: string
+          created_at?: string | null
+          date_reported?: string | null
+          date_resolved?: string | null
+          description: string
+          id?: string
+          location?: string | null
+          notes?: string | null
+          priority?: string | null
+          reporter_contact?: string | null
+          reporter_name: string
+          status?: string | null
+          ticket_number: string
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          assigned_to?: string | null
+          category?: string
+          created_at?: string | null
+          date_reported?: string | null
+          date_resolved?: string | null
+          description?: string
+          id?: string
+          location?: string | null
+          notes?: string | null
+          priority?: string | null
+          reporter_contact?: string | null
+          reporter_name?: string
+          status?: string | null
+          ticket_number?: string
+          title?: string
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: []
