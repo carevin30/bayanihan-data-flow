@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,118 +8,82 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Plus, Calendar, MapPin } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { 
+  Search, 
+  Plus, 
+  Calendar, 
+  MapPin, 
+  Users, 
+  DollarSign,
+  Clock,
+  CheckCircle,
+  AlertCircle
+} from "lucide-react";
 
 interface Activity {
   id: string;
   title: string;
   type: string;
-  description: string | null;
+  description: string;
   date: string;
+  time: string;
   location: string;
+  budget: number;
+  attendees: number;
+  maxAttendees?: number;
   status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
   organizer: string;
 }
 
+const mockActivities: Activity[] = [
+  {
+    id: '1',
+    title: 'Community Clean-up Drive',
+    type: 'Environmental',
+    description: 'Monthly barangay clean-up activity focusing on public areas and waterways',
+    date: '2024-03-15',
+    time: '06:00 AM',
+    location: 'Barangay Hall - Main Street',
+    budget: 5000,
+    attendees: 45,
+    maxAttendees: 100,
+    status: 'upcoming',
+    organizer: 'Environment Committee'
+  },
+  {
+    id: '2',
+    title: 'Feeding Program for Children',
+    type: 'Social Services',
+    description: 'Monthly feeding program for malnourished children in the barangay',
+    date: '2024-03-10',
+    time: '10:00 AM',
+    location: 'Day Care Center',
+    budget: 15000,
+    attendees: 80,
+    maxAttendees: 120,
+    status: 'ongoing',
+    organizer: 'Health Committee'
+  },
+  {
+    id: '3',
+    title: 'Vaccination Drive - COVID-19 Booster',
+    type: 'Health',
+    description: 'Free COVID-19 booster vaccination for senior citizens and high-risk individuals',
+    date: '2024-02-28',
+    time: '09:00 AM',
+    location: 'Covered Court',
+    budget: 8000,
+    attendees: 150,
+    status: 'completed',
+    organizer: 'Health Committee'
+  }
+];
+
 export default function ActivitiesModule() {
-  const [activities, setActivities] = useState<Activity[]>([]);
+  const [activities] = useState<Activity[]>(mockActivities);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTab, setSelectedTab] = useState('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    title: '',
-    type: '',
-    description: '',
-    date: new Date().toISOString().split('T')[0],
-    time: '09:00',
-    location: '',
-    organizer: ''
-  });
-  const { toast } = useToast();
-
-  useEffect(() => {
-    fetchActivities();
-  }, []);
-
-  const fetchActivities = async () => {
-    const { data, error } = await supabase
-      .from('activities')
-      .select('*')
-      .order('date', { ascending: false });
-
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to fetch activities",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setActivities((data || []) as Activity[]);
-  };
-
-  const handleSubmit = async () => {
-    if (!formData.title || !formData.type || !formData.date || !formData.location || !formData.organizer) {
-      toast({
-        title: "Error",
-        description: "Please fill in all required fields",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      toast({
-        title: "Error",
-        description: "You must be logged in to add activities",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const activityDateTime = `${formData.date}T${formData.time}:00`;
-
-    const { error } = await supabase.from('activities').insert({
-      user_id: user.id,
-      title: formData.title,
-      type: formData.type,
-      description: formData.description,
-      date: activityDateTime,
-      location: formData.location,
-      organizer: formData.organizer,
-      status: 'upcoming'
-    });
-
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to add activity",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    toast({
-      title: "Success",
-      description: "Activity added successfully"
-    });
-
-    setIsAddModalOpen(false);
-    setFormData({
-      title: '',
-      type: '',
-      description: '',
-      date: new Date().toISOString().split('T')[0],
-      time: '09:00',
-      location: '',
-      organizer: ''
-    });
-    fetchActivities();
-  };
 
   const activityTypes = ['Environmental', 'Health', 'Social Services', 'Education', 'Sports', 'Cultural'];
   
@@ -130,10 +94,28 @@ export default function ActivitiesModule() {
     return matchesSearch && matchesTab;
   });
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'upcoming': return 'bg-civic-info text-civic-info-foreground';
+      case 'ongoing': return 'bg-civic-warning text-civic-warning-foreground';
+      case 'completed': return 'bg-civic-success text-civic-success-foreground';
+      case 'cancelled': return 'bg-civic-danger text-civic-danger-foreground';
+      default: return 'bg-secondary text-secondary-foreground';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'upcoming': return <Clock className="h-3 w-3" />;
+      case 'ongoing': return <AlertCircle className="h-3 w-3" />;
+      case 'completed': return <CheckCircle className="h-3 w-3" />;
+      default: return <Clock className="h-3 w-3" />;
+    }
+  };
+
   return (
     <div className="space-y-6">
-      {/* Header with Add Button */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-foreground">Activities & Programs</h2>
           <p className="text-muted-foreground">Manage barangay events, programs, and community activities</p>
@@ -141,7 +123,7 @@ export default function ActivitiesModule() {
         
         <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-civic-primary hover:bg-civic-primary/90 w-full sm:w-auto">
+            <Button className="bg-civic-primary hover:bg-civic-primary/90">
               <Plus className="h-4 w-4 mr-2" />
               Add Activity
             </Button>
@@ -155,18 +137,16 @@ export default function ActivitiesModule() {
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="activity-title" className="text-right">Title</Label>
-                <Input 
-                  id="activity-title" 
-                  placeholder="Activity title" 
-                  className="col-span-3"
-                  value={formData.title}
-                  onChange={(e) => setFormData({...formData, title: e.target.value})}
-                />
+                <Label htmlFor="activity-title" className="text-right">
+                  Title
+                </Label>
+                <Input id="activity-title" placeholder="Activity title" className="col-span-3" />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="activity-type" className="text-right">Type</Label>
-                <Select value={formData.type} onValueChange={(value) => setFormData({...formData, type: value})}>
+                <Label htmlFor="activity-type" className="text-right">
+                  Type
+                </Label>
+                <Select>
                   <SelectTrigger className="col-span-3">
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
@@ -178,57 +158,37 @@ export default function ActivitiesModule() {
                 </Select>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="activity-date" className="text-right">Date & Time</Label>
+                <Label htmlFor="activity-date" className="text-right">
+                  Date & Time
+                </Label>
                 <div className="col-span-3 flex gap-2">
-                  <Input 
-                    id="activity-date" 
-                    type="date" 
-                    className="flex-1"
-                    value={formData.date}
-                    onChange={(e) => setFormData({...formData, date: e.target.value})}
-                  />
-                  <Input 
-                    id="activity-time" 
-                    type="time" 
-                    className="flex-1"
-                    value={formData.time}
-                    onChange={(e) => setFormData({...formData, time: e.target.value})}
-                  />
+                  <Input id="activity-date" type="date" className="flex-1" />
+                  <Input id="activity-time" type="time" className="flex-1" />
                 </div>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="activity-location" className="text-right">Location</Label>
-                <Input 
-                  id="activity-location" 
-                  placeholder="Event location" 
-                  className="col-span-3"
-                  value={formData.location}
-                  onChange={(e) => setFormData({...formData, location: e.target.value})}
-                />
+                <Label htmlFor="activity-location" className="text-right">
+                  Location
+                </Label>
+                <Input id="activity-location" placeholder="Event location" className="col-span-3" />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="activity-organizer" className="text-right">Organizer</Label>
-                <Input 
-                  id="activity-organizer" 
-                  placeholder="Organizing committee" 
-                  className="col-span-3"
-                  value={formData.organizer}
-                  onChange={(e) => setFormData({...formData, organizer: e.target.value})}
-                />
+                <Label htmlFor="activity-budget" className="text-right">
+                  Budget
+                </Label>
+                <Input id="activity-budget" type="number" placeholder="0" className="col-span-3" />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="activity-description" className="text-right">Description</Label>
-                <Textarea 
-                  id="activity-description" 
-                  placeholder="Activity description..." 
-                  className="col-span-3"
-                  value={formData.description}
-                  onChange={(e) => setFormData({...formData, description: e.target.value})}
-                />
+                <Label htmlFor="activity-description" className="text-right">
+                  Description
+                </Label>
+                <Textarea id="activity-description" placeholder="Activity description..." className="col-span-3" />
               </div>
             </div>
             <DialogFooter>
-              <Button type="submit" onClick={handleSubmit}>Save Activity</Button>
+              <Button type="submit" onClick={() => setIsAddModalOpen(false)}>
+                Save Activity
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -263,14 +223,20 @@ export default function ActivitiesModule() {
           <div className="grid gap-4">
             {filteredActivities.map((activity) => (
               <Card key={activity.id} className="hover:shadow-md transition-shadow">
-                <CardHeader>
+                <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div className="space-y-2">
-                      <CardTitle className="text-lg">{activity.title}</CardTitle>
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-lg">{activity.title}</CardTitle>
+                        <Badge className={getStatusColor(activity.status)}>
+                          {getStatusIcon(activity.status)}
+                          <span className="ml-1 capitalize">{activity.status}</span>
+                        </Badge>
+                      </div>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
-                          {new Date(activity.date).toLocaleString()}
+                          {new Date(activity.date).toLocaleDateString()} at {activity.time}
                         </span>
                         <span className="flex items-center gap-1">
                           <MapPin className="h-3 w-3" />
@@ -279,26 +245,47 @@ export default function ActivitiesModule() {
                         <Badge variant="outline">{activity.type}</Badge>
                       </div>
                     </div>
+                    <Button variant="outline" size="sm">
+                      View Details
+                    </Button>
                   </div>
                 </CardHeader>
-                {activity.description && (
-                  <CardContent>
-                    <CardDescription>{activity.description}</CardDescription>
-                  </CardContent>
-                )}
-              </Card>
-            ))}
-
-            {filteredActivities.length === 0 && (
-              <Card>
-                <CardContent className="text-center py-8">
-                  <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-foreground mb-2">No activities found</h3>
-                  <p className="text-muted-foreground">Try adjusting your search or tab selection.</p>
+                <CardContent className="pt-0">
+                  <CardDescription className="text-sm mb-4">
+                    {activity.description}
+                  </CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4 text-sm">
+                      <span className="flex items-center gap-1">
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                        <span>{activity.attendees}</span>
+                        {activity.maxAttendees && <span className="text-muted-foreground">/ {activity.maxAttendees}</span>}
+                        <span className="text-muted-foreground">attendees</span>
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <DollarSign className="h-4 w-4 text-muted-foreground" />
+                        <span>₱{activity.budget.toLocaleString()}</span>
+                        <span className="text-muted-foreground">budget</span>
+                      </span>
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Organized by {activity.organizer}
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
-            )}
+            ))}
           </div>
+
+          {filteredActivities.length === 0 && (
+            <Card>
+              <CardContent className="text-center py-8">
+                <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-2">No activities found</h3>
+                <p className="text-muted-foreground">Try adjusting your search or tab selection.</p>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
     </div>
