@@ -137,20 +137,20 @@ export default function ReportsModule() {
   return (
     <div className="space-y-6">
       {/* Header with Add Button */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold text-foreground">Reports & Concerns</h2>
           <p className="text-muted-foreground">Manage resident concerns and generate barangay reports</p>
         </div>
         
-        <div className="flex gap-2">
-          <Button variant="outline">
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Button variant="outline" className="flex-1 sm:flex-none">
             <Download className="h-4 w-4 mr-2" />
             Generate Report
           </Button>
           <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-civic-primary hover:bg-civic-primary/90">
+              <Button className="bg-civic-primary hover:bg-civic-primary/90 flex-1 sm:flex-none">
                 <Plus className="h-4 w-4 mr-2" />
                 New Report
               </Button>

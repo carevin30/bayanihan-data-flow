@@ -121,7 +121,7 @@ export default function OrdinancesModule() {
   return (
     <div className="space-y-6">
       {/* Header with Add Button */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold text-foreground">Ordinances & Policies</h2>
           <p className="text-muted-foreground">Digital library of barangay resolutions and ordinances</p>
@@ -129,7 +129,7 @@ export default function OrdinancesModule() {
         
         <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-civic-primary hover:bg-civic-primary/90">
+            <Button className="bg-civic-primary hover:bg-civic-primary/90 w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-2" />
               Add Ordinance
             </Button>
