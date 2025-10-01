@@ -185,13 +185,13 @@ export default function ReportsModule() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold text-foreground">Reports & Concerns</h2>
           <p className="text-muted-foreground">Manage resident concerns and generate barangay reports</p>
         </div>
         
-        <div className="flex gap-2">
+        <div className="flex gap-2 shrink-0">
           <Button variant="outline" onClick={generateMonthlyReport}>
             <Download className="h-4 w-4 mr-2" />
             Generate Report

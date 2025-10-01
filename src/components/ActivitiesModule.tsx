@@ -175,7 +175,7 @@ export default function ActivitiesModule() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold text-foreground">Activities & Programs</h2>
           <p className="text-muted-foreground">Manage barangay events, programs, and community activities</p>
@@ -183,7 +183,7 @@ export default function ActivitiesModule() {
         
         <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-civic-primary hover:bg-civic-primary/90">
+            <Button className="bg-civic-primary hover:bg-civic-primary/90 shrink-0">
               <Plus className="h-4 w-4 mr-2" />
               Add Activity
             </Button>
